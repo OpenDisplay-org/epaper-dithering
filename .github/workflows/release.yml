@@ -1,0 +1,56 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write  # For PyPI trusted publishing
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      python-release-created: ${{ steps.release.outputs['packages/python--release_created'] }}
+      python-tag: ${{ steps.release.outputs['packages/python--tag_name'] }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          # Use manifest-based config for monorepo
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # Publish Python package to PyPI
+  publish-python:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.python-release-created }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/python
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Build package
+        run: uv build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: packages/python/dist/
