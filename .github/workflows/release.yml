@@ -14,10 +14,10 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     outputs:
-      python-release-created: ${{ steps.release.outputs['python--release_created'] }}
-      python-tag: ${{ steps.release.outputs['python--tag_name'] }}
-      javascript-release-created: ${{ steps.release.outputs['javascript--release_created'] }}
-      javascript-tag: ${{ steps.release.outputs['javascript--tag_name'] }}
+      python-release-created: ${{ steps.release.outputs['packages/python--release_created'] }}
+      python-tag: ${{ steps.release.outputs['packages/python--tag_name'] }}
+      javascript-release-created: ${{ steps.release.outputs['packages/javascript--release_created'] }}
+      javascript-tag: ${{ steps.release.outputs['packages/javascript--tag_name'] }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
