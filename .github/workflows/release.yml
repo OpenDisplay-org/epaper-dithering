@@ -16,6 +16,8 @@ jobs:
     outputs:
       python-release-created: ${{ steps.release.outputs['packages/python--release_created'] }}
       python-tag: ${{ steps.release.outputs['packages/python--tag_name'] }}
+      javascript-release-created: ${{ steps.release.outputs['packages/javascript--release_created'] }}
+      javascript-tag: ${{ steps.release.outputs['packages/javascript--tag_name'] }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
@@ -54,3 +56,39 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: packages/python/dist/
+
+  # Publish JavaScript package to npm
+  publish-javascript:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.javascript-release-created }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Required for npm provenance
+      contents: read
+    defaults:
+      run:
+        working-directory: packages/javascript
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run tests
+        run: bun test
+
+      - name: Build package
+        run: bun run build
+
+      - name: Publish to npm with provenance
+        run: npm publish --provenance --access public

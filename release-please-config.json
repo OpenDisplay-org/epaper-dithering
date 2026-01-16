@@ -10,6 +10,17 @@
         "pyproject.toml",
         "src/epaper_dithering/__init__.py"
       ]
+    },
+    "packages/javascript": {
+      "release-type": "node",
+      "package-name": "@opendisplay/epaper-dithering",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        "package.json",
+        "src/index.ts"
+      ]
     }
   },
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"

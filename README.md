@@ -25,15 +25,64 @@ dithered.save("output.png")
 
 See [`packages/python/README.md`](packages/python/README.md) for detailed documentation.
 
-### JavaScript (Coming Soon)
+### JavaScript/TypeScript (`packages/javascript/`)
 
-JavaScript/TypeScript implementation for browser and Node.js environments.
-Will be published to npm as `@opendisplay/epaper-dithering`.
+Dithering algorithms for e-paper displays in TypeScript. Published to npm as `@opendisplay/epaper-dithering`.
+
+**Installation:**
+```bash
+npm install @opendisplay/epaper-dithering
+# or
+bun add @opendisplay/epaper-dithering
+```
+
+**Usage (Browser):**
+```typescript
+import { ditherImage, ColorScheme, DitherMode } from '@opendisplay/epaper-dithering';
+
+// Create ImageBuffer from Canvas
+const canvas = document.createElement('canvas');
+const ctx = canvas.getContext('2d')!;
+ctx.drawImage(img, 0, 0);
+const imageData = ctx.getImageData(0, 0, img.width, img.height);
+
+const imageBuffer = {
+  width: imageData.width,
+  height: imageData.height,
+  data: imageData.data,
+};
+
+const dithered = ditherImage(imageBuffer, ColorScheme.BWR, DitherMode.FLOYD_STEINBERG);
+```
+
+**Usage (Node.js with sharp):**
+```typescript
+import sharp from 'sharp';
+import { ditherImage, ColorScheme, DitherMode } from '@opendisplay/epaper-dithering';
+
+const { data, info } = await sharp('photo.jpg')
+  .ensureAlpha()
+  .raw()
+  .toBuffer({ resolveWithObject: true });
+
+const imageBuffer = {
+  width: info.width,
+  height: info.height,
+  data: new Uint8ClampedArray(data),
+};
+
+const dithered = ditherImage(imageBuffer, ColorScheme.BWR, DitherMode.BURKES);
+```
+
+See [`packages/javascript/README.md`](packages/javascript/README.md) for detailed documentation.
 
 ## Features
 
-- **8 Dithering Algorithms**: From fast ordered dithering to high-quality Jarvis-Judice-Ninke
+- **9 Dithering Algorithms**: NONE, BURKES, ORDERED, FLOYD_STEINBERG, ATKINSON, STUCKI, SIERRA, SIERRA_LITE, JARVIS_JUDICE_NINKE
 - **6 Color Schemes**: MONO, BWR, BWY, BWRY, BWGBRY (Spectra 6), GRAYSCALE_4
+- **Multiple Languages**: Python and JavaScript/TypeScript implementations
+- **Universal**: Works in Python, Node.js, and browser environments
+- **Type-Safe**: Full type coverage in both languages
 
 ## Development
 
@@ -43,6 +92,17 @@ Will be published to npm as `@opendisplay/epaper-dithering`.
 cd packages/python
 uv sync --all-extras
 uv run pytest tests/ -v
+uv run ruff check src/ tests/
+uv run mypy src/epaper_dithering
+```
+
+### JavaScript Development
+
+```bash
+cd packages/javascript
+bun install
+bun test
+bun run build
 ```
 
 ### Repository Structure
@@ -54,16 +114,27 @@ epaper-dithering/
 │   │   ├── src/
 │   │   ├── tests/
 │   │   └── pyproject.toml
-│   └── javascript/      # JS implementation (future)
+│   └── javascript/      # TypeScript/JavaScript implementation
+│       ├── src/
+│       ├── tests/
+│       └── package.json
 ├── fixtures/            # Shared test fixtures
 │   ├── images/          # Input test images
 │   └── expected/        # Expected dithered outputs
+├── .github/
+│   └── workflows/       # CI/CD for both packages
 ├── docs/                # Shared documentation
 └── README.md
 ```
 
-### Future plans
- - JavaScript implementation
- - Base colors on real e-paper display colors
- - Add an s curve for tone mapping
- - Combine implementations into a single rust implementation with bindings for other languages
+## Related Projects
+
+- **py-opendisplay**: [Python library for OpenDisplay BLE e-paper devices](https://github.com/OpenDisplay-org/py-opendisplay)
+
+## Future Plans
+
+- Base colors on real e-paper display colors (perceptual color matching)
+- Add s-curve tone mapping for better contrast
+- Rust implementation with bindings for Python/JavaScript/other languages
+- Web-based demo/playground
+
