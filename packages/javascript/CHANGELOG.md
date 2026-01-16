@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.2](https://github.com/OpenDisplay-org/epaper-dithering/compare/javascript-v2.1.1...javascript-v2.1.2) (2026-01-16)
+
+
+### Bug Fixes
+
+* update BWGBRY color palette order ([4e2e574](https://github.com/OpenDisplay-org/epaper-dithering/commit/4e2e574dbc6119f0c954ef9b03480ef31cc4bc7f))
+
 ## [2.1.1](https://github.com/OpenDisplay-org/epaper-dithering/compare/javascript-v2.1.0...javascript-v2.1.1) (2026-01-16)
 
 
