@@ -2,6 +2,7 @@
   "packages": {
     "packages/python": {
       "release-type": "python",
+      "component": "python",
       "package-name": "epaper-dithering",
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true,
@@ -13,6 +14,7 @@
     },
     "packages/javascript": {
       "release-type": "node",
+      "component": "javascript",
       "package-name": "@opendisplay/epaper-dithering",
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true,
