@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>epaper-dithering Demo</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        canvas {
+            max-width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+        select, input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .info {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #666;
+        }
+        .error {
+            color: #dc3545;
+            padding: 10px;
+            background: #f8d7da;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📄 E-Paper Dithering Demo</h1>
+    <p>Upload an image and see it dithered for e-paper displays using different algorithms and color schemes.</p>
+
+    <div class="controls">
+        <label for="imageInput">Select Image:</label>
+        <input type="file" id="imageInput" accept="image/*">
+
+        <label for="colorScheme">Color Scheme:</label>
+        <select id="colorScheme">
+            <option value="0">MONO (Black & White)</option>
+            <option value="1" selected>BWR (Black, White, Red)</option>
+            <option value="2">BWY (Black, White, Yellow)</option>
+            <option value="3">BWRY (Black, White, Red, Yellow)</option>
+            <option value="4">BWGBRY (Spectra 6: Black, White, Green, Blue, Red, Yellow)</option>
+            <option value="5">GRAYSCALE_4 (4-level grayscale)</option>
+        </select>
+
+        <label for="ditherMode">Dithering Algorithm:</label>
+        <select id="ditherMode">
+            <option value="0">NONE (No dithering)</option>
+            <option value="1" selected>BURKES (Default - balanced)</option>
+            <option value="2">ORDERED (Fast - Bayer matrix)</option>
+            <option value="3">FLOYD_STEINBERG (Popular)</option>
+            <option value="4">ATKINSON (Classic Mac style)</option>
+            <option value="5">STUCKI (High quality)</option>
+            <option value="6">SIERRA (High quality)</option>
+            <option value="7">SIERRA_LITE (Fast)</option>
+            <option value="8">JARVIS_JUDICE_NINKE (Highest quality)</option>
+        </select>
+
+        <button id="processBtn" disabled>Process Image</button>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <h3>Original</h3>
+            <canvas id="originalCanvas"></canvas>
+            <div id="originalInfo" class="info"></div>
+        </div>
+
+        <div class="panel">
+            <h3>Dithered for E-Paper</h3>
+            <canvas id="ditheredCanvas"></canvas>
+            <div id="ditheredInfo" class="info"></div>
+        </div>
+    </div>
+
+    <div id="error" class="error" style="display: none;"></div>
+
+    <!-- Import the library from unpkg CDN (once published) -->
+    <!-- For local testing, you'll need to use a local server -->
+    <script type="module">
+        // For local development, import from local build
+        // import { ditherImage, ColorScheme, DitherMode } from './packages/javascript/dist/index.js';
+
+        // Once published to npm, you can use:
+        import { ditherImage, ColorScheme, DitherMode } from 'https://cdn.jsdelivr.net/npm/@opendisplay/epaper-dithering@0.1.0/dist/index.js';
+
+        const imageInput = document.getElementById('imageInput');
+        const colorSchemeSelect = document.getElementById('colorScheme');
+        const ditherModeSelect = document.getElementById('ditherMode');
+        const processBtn = document.getElementById('processBtn');
+        const originalCanvas = document.getElementById('originalCanvas');
+        const ditheredCanvas = document.getElementById('ditheredCanvas');
+        const originalInfo = document.getElementById('originalInfo');
+        const ditheredInfo = document.getElementById('ditheredInfo');
+        const errorDiv = document.getElementById('error');
+
+        let currentImage = null;
+
+        imageInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            errorDiv.style.display = 'none';
+
+            try {
+                const img = new Image();
+                img.src = URL.createObjectURL(file);
+                await img.decode();
+
+                currentImage = img;
+                processBtn.disabled = false;
+
+                // Draw original
+                const ctx = originalCanvas.getContext('2d');
+                originalCanvas.width = img.width;
+                originalCanvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+
+                originalInfo.textContent = `Size: ${img.width}×${img.height}`;
+
+                // Auto-process
+                processImage();
+            } catch (err) {
+                showError('Failed to load image: ' + err.message);
+            }
+        });
+
+        colorSchemeSelect.addEventListener('change', () => {
+            if (currentImage) processImage();
+        });
+
+        ditherModeSelect.addEventListener('change', () => {
+            if (currentImage) processImage();
+        });
+
+        processBtn.addEventListener('click', processImage);
+
+        function processImage() {
+            if (!currentImage) return;
+
+            errorDiv.style.display = 'none';
+
+            try {
+                const startTime = performance.now();
+
+                // Get image data from original canvas
+                const ctx = originalCanvas.getContext('2d');
+                const imageData = ctx.getImageData(0, 0, currentImage.width, currentImage.height);
+
+                // Create ImageBuffer
+                const imageBuffer = {
+                    width: imageData.width,
+                    height: imageData.height,
+                    data: imageData.data
+                };
+
+                // Get selected options
+                const colorScheme = parseInt(colorSchemeSelect.value);
+                const ditherMode = parseInt(ditherModeSelect.value);
+
+                // Dither the image
+                const dithered = ditherImage(imageBuffer, colorScheme, ditherMode);
+
+                const processingTime = (performance.now() - startTime).toFixed(1);
+
+                // Render dithered result
+                const ditheredCtx = ditheredCanvas.getContext('2d');
+                ditheredCanvas.width = dithered.width;
+                ditheredCanvas.height = dithered.height;
+                const resultData = ditheredCtx.createImageData(dithered.width, dithered.height);
+
+                // Convert palette indices to RGBA
+                for (let i = 0; i < dithered.indices.length; i++) {
+                    const color = dithered.palette[dithered.indices[i]];
+                    resultData.data[i * 4] = color.r;
+                    resultData.data[i * 4 + 1] = color.g;
+                    resultData.data[i * 4 + 2] = color.b;
+                    resultData.data[i * 4 + 3] = 255;
+                }
+
+                ditheredCtx.putImageData(resultData, 0, 0);
+
+                // Show info
+                const colorNames = {
+                    0: 'MONO', 1: 'BWR', 2: 'BWY', 3: 'BWRY', 4: 'BWGBRY', 5: 'GRAYSCALE_4'
+                };
+                const modeNames = {
+                    0: 'NONE', 1: 'BURKES', 2: 'ORDERED', 3: 'FLOYD_STEINBERG',
+                    4: 'ATKINSON', 5: 'STUCKI', 6: 'SIERRA', 7: 'SIERRA_LITE', 8: 'JARVIS_JUDICE_NINKE'
+                };
+
+                ditheredInfo.innerHTML = `
+                    Size: ${dithered.width}×${dithered.height}<br>
+                    Colors: ${dithered.palette.length} (${colorNames[colorScheme]})<br>
+                    Algorithm: ${modeNames[ditherMode]}<br>
+                    Processing time: ${processingTime}ms
+                `;
+            } catch (err) {
+                showError('Dithering failed: ' + err.message);
+                console.error(err);
+            }
+        }
+
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        // Load a sample image on page load
+        window.addEventListener('load', () => {
+            console.log('E-Paper Dithering Demo loaded');
+            console.log('Upload an image to see dithering in action!');
+        });
+    </script>
+</body>
+</html>
