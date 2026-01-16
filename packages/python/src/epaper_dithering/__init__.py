@@ -8,7 +8,7 @@ from .core import dither_image
 from .enums import DitherMode
 from .palettes import ColorPalette, ColorScheme
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "dither_image",
