@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.3](https://github.com/OpenDisplay-org/epaper-dithering/compare/javascript-v2.1.2...javascript-v2.1.3) (2026-01-17)
+
+
+### Bug Fixes
+
+* truncate pixel values instead of clamping ([3ce01d5](https://github.com/OpenDisplay-org/epaper-dithering/commit/3ce01d522dd4ed94d6229ab5bb743adbd0506962))
+
 ## [2.1.2](https://github.com/OpenDisplay-org/epaper-dithering/compare/javascript-v2.1.1...javascript-v2.1.2) (2026-01-16)
 
 
