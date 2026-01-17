@@ -66,11 +66,11 @@ function errorDiffusionDither(
       const idx = y * width + x;
       const pixelIdx = idx * 3;
 
-      // Get old pixel (clamp to 0-255)
+      // Get old pixel (truncate, no clamping - matches Python behavior)
       const oldPixel: RGB = {
-        r: Math.max(0, Math.min(255, Math.round(pixels[pixelIdx]))),
-        g: Math.max(0, Math.min(255, Math.round(pixels[pixelIdx + 1]))),
-        b: Math.max(0, Math.min(255, Math.round(pixels[pixelIdx + 2]))),
+        r: Math.trunc(pixels[pixelIdx]),
+        g: Math.trunc(pixels[pixelIdx + 1]),
+        b: Math.trunc(pixels[pixelIdx + 2]),
       };
 
       // Find closest palette color
@@ -147,11 +147,11 @@ export function orderedDither(
       // Get threshold from Bayer matrix
       const threshold = bayerMatrix[(y % 4) * 4 + (x % 4)];
 
-      // Add threshold noise
+      // Add threshold noise (clamp to 0-255 like Python's np.clip)
       const rgb: RGB = {
-        r: Math.min(255, image.data[dataIdx] + threshold),
-        g: Math.min(255, image.data[dataIdx + 1] + threshold),
-        b: Math.min(255, image.data[dataIdx + 2] + threshold),
+        r: Math.max(0, Math.min(255, Math.trunc(image.data[dataIdx] + threshold))),
+        g: Math.max(0, Math.min(255, Math.trunc(image.data[dataIdx + 1] + threshold))),
+        b: Math.max(0, Math.min(255, Math.trunc(image.data[dataIdx + 2] + threshold))),
       };
 
       indices[idx] = findClosestPaletteColor(rgb, palette);
