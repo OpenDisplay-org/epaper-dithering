@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from epaper_dithering.color_space import linear_to_srgb, srgb_to_linear
 
@@ -133,14 +132,8 @@ class TestLinearToSRGB:
         - Truncation: 127.9 → 127 (always rounds down)
         - Rounding: 127.9 → 128 (rounds to nearest)
         """
-        # Value that converts to something like 127.9
-        # We test that it rounds to 128, not truncates to 127
-        linear = np.array([0.215686], dtype=np.float32)  # Close to sRGB 128
-        srgb = linear_to_srgb(linear)
-
-        # Should round, not truncate
-        # The exact value depends on the gamma curve, but we can verify
-        # that multiple similar values round correctly
+        # Test that multiple similar values round correctly
+        # Values around 0.215 convert to sRGB values near 128
         test_values = np.linspace(0.215, 0.216, 10, dtype=np.float32)
         results = linear_to_srgb(test_values)
 

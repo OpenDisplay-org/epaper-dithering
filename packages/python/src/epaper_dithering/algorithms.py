@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import numpy as np
 from PIL import Image
 
-from .color_space import linear_to_srgb, srgb_to_linear
+from .color_space import srgb_to_linear
 from .palettes import ColorScheme
 
 
