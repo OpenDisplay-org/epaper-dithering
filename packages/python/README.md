@@ -8,6 +8,14 @@ Dithering algorithms optimized for e-ink/e-paper displays with limited color pal
 pip install epaper-dithering
 ```
 
+## Features
+
+- **Perceptually Correct**: Uses linear RGB color space with gamma correction for accurate error diffusion
+- **8 Dithering Algorithms**: From simple ordered dithering to high-quality Jarvis-Judice-Ninke
+- **6 Color Schemes**: Support for mono, 3-color, 4-color, and 6-color e-paper displays
+- **Serpentine Scanning**: Reduces directional artifacts in error diffusion (enabled by default)
+- **RGBA Support**: Automatic compositing on white background for transparent images
+
 ## Quick Start
 
 ```python
@@ -79,6 +87,33 @@ dithered = dither_image(img, ColorScheme.GRAYSCALE_4)
 
 # 6-color display (Spectra)
 dithered = dither_image(img, ColorScheme.BWGBRY)
+```
+
+### Advanced Options
+
+#### Serpentine Scanning
+
+By default, error diffusion algorithms use serpentine scanning (alternating scan direction per row) to reduce directional artifacts and "worm" patterns. You can disable this for raster scanning:
+
+```python
+# Default: serpentine scanning (recommended for best quality)
+result = dither_image(img, ColorScheme.BWR, DitherMode.FLOYD_STEINBERG, serpentine=True)
+
+# Disable serpentine for raster scanning (left-to-right only)
+result = dither_image(img, ColorScheme.BWR, DitherMode.FLOYD_STEINBERG, serpentine=False)
+```
+
+Note: The `serpentine` parameter only affects error diffusion algorithms (Floyd-Steinberg, Burkes, Atkinson, Sierra, Sierra Lite, Stucki, Jarvis-Judice-Ninke). It has no effect on NONE and ORDERED modes.
+
+#### RGBA Images
+
+Images with transparency (RGBA mode) are automatically composited on a white background, matching the typical appearance of e-paper displays:
+
+```python
+# RGBA images are handled automatically
+rgba_img = Image.open("transparent.png")  # Has alpha channel
+result = dither_image(rgba_img, ColorScheme.BWR)
+# Transparent areas become white
 ```
 
 

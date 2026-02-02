@@ -1,5 +1,6 @@
 """Tests for dithering functionality."""
 
+import numpy as np
 import pytest
 from PIL import Image
 
@@ -103,3 +104,141 @@ class TestDitherMode:
         assert DitherMode.NONE == 0
         assert DitherMode.BURKES == 1
         assert DitherMode.FLOYD_STEINBERG == 3
+
+
+class TestColorScience:
+    """Test v2.0.0 color science improvements."""
+
+    def test_gamma_correction_improves_midtones(self):
+        """Test that gamma correction prevents dark crushing in midtones.
+
+        With proper gamma correction, all 4 grayscale levels should be used
+        in a gradient, not just black and white.
+        """
+        # Create gradient from black to white
+        gradient = Image.new("RGB", (256, 64))
+        for x in range(256):
+            for y in range(64):
+                gradient.putpixel((x, y), (x, x, x))
+
+        result = dither_image(gradient, ColorScheme.GRAYSCALE_4, DitherMode.FLOYD_STEINBERG)
+
+        # Analyze histogram of palette usage
+        histogram = result.histogram()[:4]  # First 4 entries (grayscale palette)
+
+        # All 4 grays should be used (not just black/white)
+        assert all(count > 0 for count in histogram), \
+            f"All 4 grayscale levels should be used, got counts: {histogram}"
+
+        # Middle grays should be used significantly (not crushed to extremes)
+        assert histogram[1] > 100, "Gray1 should be used in midtones"
+        assert histogram[2] > 100, "Gray2 should be used in midtones"
+
+    def test_alpha_composites_on_white(self):
+        """Test RGBA images composite on white background, not black.
+
+        This tests that alpha handling is correct. With proper compositing,
+        semi-transparent white on white should stay white, and
+        semi-transparent black should not composite on black background.
+        """
+        # Create semi-transparent white (should stay mostly white on white background)
+        rgba_white = Image.new("RGBA", (10, 10), (255, 255, 255, 128))
+        result_white = dither_image(rgba_white, ColorScheme.MONO, DitherMode.NONE)
+        histogram_white = result_white.histogram()
+
+        # Should map to white (compositing white on white = white)
+        assert histogram_white[1] > histogram_white[0], \
+            f"Semi-transparent white should stay white, got {histogram_white[:2]}"
+
+        # Also test that transparent areas are handled
+        # Create image with transparent pixels
+        rgba_transparent = Image.new("RGBA", (10, 10), (0, 0, 0, 0))  # Fully transparent
+        result_transparent = dither_image(rgba_transparent, ColorScheme.MONO, DitherMode.NONE)
+        histogram_transparent = result_transparent.histogram()
+
+        # Fully transparent should become white (background color)
+        assert histogram_transparent[1] == 100, \
+            f"Fully transparent should become white background, got {histogram_transparent[:2]}"
+
+    def test_serpentine_parameter_works(self):
+        """Test serpentine parameter can be enabled/disabled."""
+        gradient = Image.new("RGB", (100, 100), (128, 128, 128))
+
+        # Test with serpentine enabled (default)
+        result_serpentine = dither_image(
+            gradient, ColorScheme.MONO, DitherMode.FLOYD_STEINBERG, serpentine=True
+        )
+
+        # Test with serpentine disabled
+        result_raster = dither_image(
+            gradient, ColorScheme.MONO, DitherMode.FLOYD_STEINBERG, serpentine=False
+        )
+
+        # Both should produce valid output
+        assert result_serpentine.mode == 'P'
+        assert result_raster.mode == 'P'
+
+        # Results should be different (serpentine changes the pattern)
+        array_serpentine = np.array(result_serpentine)
+        array_raster = np.array(result_raster)
+        assert not np.array_equal(array_serpentine, array_raster), \
+            "Serpentine should produce different output than raster"
+
+    def test_deterministic_output(self):
+        """Test that dithering produces identical output on repeated runs."""
+        img = Image.new("RGB", (50, 50), (128, 128, 128))
+
+        result1 = dither_image(img, ColorScheme.BWR, DitherMode.FLOYD_STEINBERG)
+        result2 = dither_image(img, ColorScheme.BWR, DitherMode.FLOYD_STEINBERG)
+
+        # Should be exactly identical
+        assert np.array_equal(np.array(result1), np.array(result2)), \
+            "Dithering should be deterministic"
+
+    def test_ordered_dithering_uses_threshold_correctly(self):
+        """Test ordered dithering produces reasonable distribution.
+
+        This verifies the fix for the broken 0-240 bias in the old implementation.
+        With proper gamma correction, sRGB 186 (50% linear) should produce
+        roughly equal black and white.
+        """
+        # sRGB 186 ≈ 50% linear light, should produce checkerboard pattern
+        gray = Image.new("RGB", (16, 16), (186, 186, 186))
+        result = dither_image(gray, ColorScheme.MONO, DitherMode.ORDERED)
+
+        pixels = list(result.getdata())
+
+        # Should be mix of black (0) and white (1)
+        unique = set(pixels)
+        assert len(unique) == 2, f"Should use both black and white, got {unique}"
+        assert 0 in unique and 1 in unique
+
+        # Should be roughly 50/50 distribution (50% linear light)
+        black_count = pixels.count(0)
+        white_count = pixels.count(1)
+        ratio = black_count / (black_count + white_count)
+        assert 0.35 < ratio < 0.65, \
+            f"Should be roughly 50/50 black/white for 50% linear, got ratio {ratio:.2f}"
+
+    def test_all_error_diffusion_with_serpentine(self):
+        """Test all error diffusion algorithms accept serpentine parameter."""
+        img = Image.new("RGB", (20, 20), (100, 100, 100))
+
+        error_diffusion_modes = [
+            DitherMode.FLOYD_STEINBERG,
+            DitherMode.BURKES,
+            DitherMode.ATKINSON,
+            DitherMode.STUCKI,
+            DitherMode.SIERRA,
+            DitherMode.SIERRA_LITE,
+            DitherMode.JARVIS_JUDICE_NINKE,
+        ]
+
+        for mode in error_diffusion_modes:
+            # Should work with serpentine=True
+            result_true = dither_image(img, ColorScheme.MONO, mode, serpentine=True)
+            assert result_true.mode == 'P', f"{mode.name} should work with serpentine=True"
+
+            # Should work with serpentine=False
+            result_false = dither_image(img, ColorScheme.MONO, mode, serpentine=False)
+            assert result_false.mode == 'P', f"{mode.name} should work with serpentine=False"
