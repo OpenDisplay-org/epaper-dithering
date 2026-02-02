@@ -6,7 +6,16 @@ for limited-color e-paper/e-ink displays.
 
 from .core import dither_image
 from .enums import DitherMode
-from .palettes import ColorPalette, ColorScheme
+from .palettes import (
+    BWRY_4_2,
+    HANSHOW_BWR,
+    HANSHOW_BWY,
+    MONO_4_26,
+    SOLUM_BWR,
+    SPECTRA_7_3_6COLOR,
+    ColorPalette,
+    ColorScheme,
+)
 
 __version__ = "0.3.0"
 
@@ -15,4 +24,11 @@ __all__ = [
     "DitherMode",
     "ColorPalette",
     "ColorScheme",
+    # Measured palettes for specific displays (v0.4.0)
+    "SPECTRA_7_3_6COLOR",
+    "MONO_4_26",
+    "BWRY_4_2",
+    "SOLUM_BWR",
+    "HANSHOW_BWR",
+    "HANSHOW_BWY",
 ]

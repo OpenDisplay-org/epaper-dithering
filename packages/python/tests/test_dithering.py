@@ -242,3 +242,61 @@ class TestColorScience:
             # Should work with serpentine=False
             result_false = dither_image(img, ColorScheme.MONO, mode, serpentine=False)
             assert result_false.mode == 'P', f"{mode.name} should work with serpentine=False"
+
+
+class TestMeasuredPalettes:
+    """Test v0.4.0 measured palette functionality."""
+
+    def test_dithering_accepts_colorpalette(self, small_test_image):
+        """Test ColorPalette accepted by dither_image."""
+        from epaper_dithering import ColorPalette
+
+        measured = ColorPalette(
+            colors={'black': (2, 2, 2), 'white': (179, 182, 171), 'red': (117, 10, 0)},
+            accent='red'
+        )
+        result = dither_image(small_test_image, measured, DitherMode.BURKES)
+
+        assert result.mode == 'P'
+        assert result.size == small_test_image.size
+
+    def test_measured_vs_pure_produces_different_output(self):
+        """Test measured colors produce different output than pure RGB."""
+        from epaper_dithering import ColorPalette
+
+        # Create simple gradient
+        gradient = Image.new("RGB", (50, 50), (128, 128, 128))
+
+        pure = ColorScheme.BWR
+        measured = ColorPalette(
+            colors={'black': (5, 5, 5), 'white': (180, 180, 170), 'red': (115, 12, 2)},
+            accent='red'
+        )
+
+        result_pure = dither_image(gradient, pure, DitherMode.FLOYD_STEINBERG)
+        result_measured = dither_image(gradient, measured, DitherMode.FLOYD_STEINBERG)
+
+        # Should be different
+        assert not np.array_equal(np.array(result_pure), np.array(result_measured))
+
+    def test_backward_compatibility_colorscheme(self, small_test_image):
+        """Test existing ColorScheme API still works unchanged."""
+        # This is the v1.x/v2.0 API - should still work
+        result = dither_image(small_test_image, ColorScheme.BWR)
+        assert result.mode == 'P'
+
+    def test_predefined_measured_palettes_work(self, small_test_image):
+        """Test exported measured palette constants."""
+        from epaper_dithering import HANSHOW_BWR, MONO_4_26, SPECTRA_7_3_6COLOR
+
+        # Test 6-color palette
+        result = dither_image(small_test_image, SPECTRA_7_3_6COLOR, DitherMode.BURKES)
+        assert result.mode == 'P'
+
+        # Test mono palette
+        result = dither_image(small_test_image, MONO_4_26, DitherMode.FLOYD_STEINBERG)
+        assert result.mode == 'P'
+
+        # Test BWR palette
+        result = dither_image(small_test_image, HANSHOW_BWR, DitherMode.SIERRA)
+        assert result.mode == 'P'

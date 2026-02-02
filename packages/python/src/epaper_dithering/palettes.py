@@ -86,7 +86,7 @@ class ColorScheme(Enum):
     ))
 
     def __init__(self, value: int, palette: ColorPalette):
-        self._value_ = value
+        self._value_ = value  # type: ignore[assignment]
         self.palette = palette
 
     @property
@@ -113,6 +113,105 @@ class ColorScheme(Enum):
             ValueError: If value is invalid
         """
         for scheme in cls:
-            if scheme.value == value:
+            if scheme.value == value:  # type: ignore[comparison-overlap]
                 return scheme
         raise ValueError(f"Invalid color scheme value: {value}")
+
+
+# ============================================================================
+# Measured Palettes for Specific E-Paper Displays
+# ============================================================================
+#
+# These constants provide measured RGB values from real e-paper displays
+# for more accurate dithering. Pure RGB colors (e.g., White=255,255,255,
+# Red=255,0,0) are much brighter than real displays, which are typically
+# 30-87% darker due to reflective screen technology.
+#
+# USAGE:
+#     from epaper_dithering import dither_image, SPECTRA_7_3_6COLOR
+#     result = dither_image(img, SPECTRA_7_3_6COLOR)
+#
+# TO ADD YOUR DISPLAY:
+#     1. Measure colors following docs/CALIBRATION.md
+#     2. Create ColorPalette with measured values
+#     3. Add constant here
+#     4. Export in __init__.py
+#
+# IMPORTANT: Color names and order MUST match the corresponding ColorScheme!
+#            Reordering colors will break palette encoding compatibility.
+#
+# STATUS: All values below are THEORETICAL/PLACEHOLDER until measured.
+#         See docs/CALIBRATION.md for measurement procedures.
+# ============================================================================
+
+# 7.3" Spectra™ 6-color (BWGBRY scheme)
+# TODO: Measure actual display - values are currently theoretical
+# Reference: esp32-photoframe (github.com/aitjcize/esp32-photoframe) measured similar display:
+#   White=(179,182,171), Red=(117,10,0), Yellow=(201,184,0),
+#   Blue=(0,47,107), Green=(33,69,40), Black=(2,2,2)
+SPECTRA_7_3_6COLOR = ColorPalette(
+    colors={
+        'black': (2, 2, 2),           # Measure: likely darker than pure black
+        'white': (179, 182, 171),     # Measure: real displays ~180-200, not 255
+        'yellow': (201, 184, 0),      # Measure: yellows are dimmer
+        'red': (117 ,10 ,0),          # Measure: reds are much darker
+        'blue': (0, 47, 107),         # Measure: blues are darker
+        'green': (33, 69, 40),        # Measure: greens are darker
+    },
+    accent='red'
+)
+
+# 4.26" Monochrome (MONO scheme)
+# TODO: Measure actual display
+MONO_4_26 = ColorPalette(
+    colors={
+        'black': (5, 5, 5),           # Measure: likely darker than pure black
+        'white': (220, 220, 220),     # Measure: real displays ~200-230, not 255
+    },
+    accent='black'
+)
+
+# 4.2" BWRY (BWRY scheme)
+# TODO: Measure actual display
+BWRY_4_2 = ColorPalette(
+    colors={
+        'black': (5, 5, 5),           # Measure
+        'white': (200, 200, 200),     # Measure
+        'red': (120, 15, 5),          # Measure
+        'yellow': (200, 180, 0),      # Measure
+    },
+    accent='red'
+)
+
+# Solum BWR (harvested display, BWR scheme)
+# TODO: Measure actual display
+SOLUM_BWR = ColorPalette(
+    colors={
+        'black': (5, 5, 5),           # Measure
+        'white': (200, 200, 200),     # Measure
+        'red': (120, 15, 5),          # Measure
+    },
+    accent='red'
+)
+
+# Hanshow BWR (harvested display, BWR scheme)
+# TODO: Measure actual display
+HANSHOW_BWR = ColorPalette(
+    colors={
+        'black': (5, 5, 5),           # Measure
+        'white': (200, 200, 200),     # Measure
+        'red': (120, 15, 5),          # Measure
+    },
+    accent='red'
+)
+
+# Hanshow BWY (harvested display, BWY scheme)
+# TODO: Measure actual display
+HANSHOW_BWY = ColorPalette(
+    colors={
+        'black': (5, 5, 5),           # Measure
+        'white': (200, 200, 200),     # Measure
+        'yellow': (200, 180, 0),      # Measure
+    },
+    accent='yellow'
+)

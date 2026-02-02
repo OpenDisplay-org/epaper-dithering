@@ -116,6 +116,69 @@ result = dither_image(rgba_img, ColorScheme.BWR)
 # Transparent areas become white
 ```
 
+## Measured Display Colors
+
+For the most accurate dithering, use measured RGB values from your specific e-paper display instead of theoretical pure RGB colors.
+
+### Why Measure?
+
+E-paper displays use reflective technology, making colors **30-87% darker** than pure RGB:
+- Pure RGB White: (255, 255, 255)  →  Real display: ~(180-200, 180-200, 180-200)
+- Pure RGB Red: (255, 0, 0)  →  Real display: ~(115-125, 10-20, 0-10)
+
+Using measured values ensures dithered images match your display's actual appearance.
+
+### Using Pre-defined Measured Palettes
+
+The library includes measured palettes for common displays:
+
+```python
+from epaper_dithering import dither_image, SPECTRA_7_3_6COLOR, DitherMode
+
+# Use measured palette for Spectra 7.3" 6-color display
+result = dither_image(img, SPECTRA_7_3_6COLOR, DitherMode.FLOYD_STEINBERG)
+```
+
+**Available measured palettes:**
+- `SPECTRA_7_3_6COLOR` - 7.3" Spectra™ 6-color (BWGBRY)
+- `MONO_4_26` - 4.26" Monochrome
+- `BWRY_4_2` - 4.2" BWRY
+- `SOLUM_BWR` - Solum BWR
+- `HANSHOW_BWR` - Hanshow BWR
+- `HANSHOW_BWY` - Hanshow BWY
+
+**Note**: Pre-defined palettes start with theoretical values. See [CALIBRATION.md](docs/CALIBRATION.md) for measuring your specific display.
+
+### Creating Custom Measured Palettes
+
+Measure your display and create a custom palette:
+
+```python
+from epaper_dithering import dither_image, ColorPalette, DitherMode
+
+# Your measured RGB values
+my_display = ColorPalette(
+    colors={
+        'black': (5, 5, 5),           # Measured from your display
+        'white': (185, 190, 180),     # Much darker than (255,255,255)
+        'red': (120, 15, 5),          # Much darker than (255,0,0)
+    },
+    accent='red'
+)
+
+# Use it directly
+result = dither_image(img, my_display, DitherMode.FLOYD_STEINBERG)
+```
+
+### Measurement Quick Start
+
+1. **Display full-screen color patches** on your e-paper
+2. **Photograph** in consistent lighting (avoid shadows/reflections)
+3. **Sample RGB values** from center using photo editor
+4. **Average 5+ samples** per color
+5. **Create ColorPalette** with measured values
+
+See [docs/CALIBRATION.md](docs/CALIBRATION.md) for detailed measurement procedures, including camera calibration, colorimeter usage, and validation techniques.
 
 ## Development
 
@@ -140,3 +203,6 @@ uv run mypy src/epaper_dithering
 
 Originally developed as part of [py-opendisplay](https://github.com/OpenDisplay-org/py-opendisplay).
 Extracted to enable reuse across multiple e-paper display projects.
+
+Measured color calibration techniques and reference measurements inspired by:
+- [esp32-photoframe](https://github.com/aitjcize/esp32-photoframe) by aitjcize - Measured palette methodology and reference values for Waveshare 7.3" displays

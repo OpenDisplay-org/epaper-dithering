@@ -8,7 +8,7 @@ import numpy as np
 from PIL import Image
 
 from .color_space import srgb_to_linear
-from .palettes import ColorScheme
+from .palettes import ColorPalette, ColorScheme
 
 
 @dataclass(frozen=True)
@@ -107,16 +107,18 @@ JARVIS_JUDICE_NINKE = ErrorDiffusionKernel(
 )
 
 
-def get_palette_colors(color_scheme: ColorScheme) -> list[tuple[int, int, int]]:
-    """Get RGB palette for color scheme.
+def get_palette_colors(color_scheme: ColorScheme | ColorPalette) -> list[tuple[int, int, int]]:
+    """Get RGB palette for color scheme or custom palette.
 
     Args:
-        color_scheme: Display color scheme
+        color_scheme: Display color scheme enum OR custom ColorPalette
 
     Returns:
         List of RGB tuples for palette (order matters for encoding)
     """
-    return list(color_scheme.palette.colors.values())
+    if isinstance(color_scheme, ColorScheme):
+        return list(color_scheme.palette.colors.values())
+    return list(color_scheme.colors.values())
 
 
 def find_closest_palette_color_linear(
@@ -163,7 +165,7 @@ def find_closest_palette_color_linear(
 
 def error_diffusion_dither(
     image: Image.Image,
-    color_scheme: ColorScheme,
+    color_scheme: ColorScheme | ColorPalette,
     kernel: ErrorDiffusionKernel,
     serpentine: bool = True,
 ) -> Image.Image:
@@ -278,7 +280,7 @@ def error_diffusion_dither(
 
 
 def floyd_steinberg_dither(
-    image: Image.Image, color_scheme: ColorScheme, serpentine: bool = True
+    image: Image.Image, color_scheme: ColorScheme | ColorPalette, serpentine: bool = True
 ) -> Image.Image:
     """Apply Floyd-Steinberg error diffusion dithering.
 
@@ -300,7 +302,7 @@ def floyd_steinberg_dither(
 
 
 def burkes_dither(
-    image: Image.Image, color_scheme: ColorScheme, serpentine: bool = True
+    image: Image.Image, color_scheme: ColorScheme | ColorPalette, serpentine: bool = True
 ) -> Image.Image:
     """Apply Burkes error diffusion dithering.
 
@@ -320,7 +322,7 @@ def burkes_dither(
 
 
 def sierra_dither(
-    image: Image.Image, color_scheme: ColorScheme, serpentine: bool = True
+    image: Image.Image, color_scheme: ColorScheme | ColorPalette, serpentine: bool = True
 ) -> Image.Image:
     """Apply Sierra error diffusion dithering.
 
@@ -343,7 +345,7 @@ def sierra_dither(
 
 
 def sierra_lite_dither(
-    image: Image.Image, color_scheme: ColorScheme, serpentine: bool = True
+    image: Image.Image, color_scheme: ColorScheme | ColorPalette, serpentine: bool = True
 ) -> Image.Image:
     """Apply Sierra Lite error diffusion dithering.
 
@@ -365,7 +367,7 @@ def sierra_lite_dither(
 
 
 def atkinson_dither(
-    image: Image.Image, color_scheme: ColorScheme, serpentine: bool = True
+    image: Image.Image, color_scheme: ColorScheme | ColorPalette, serpentine: bool = True
 ) -> Image.Image:
     """Apply Atkinson error diffusion dithering.
 
@@ -388,7 +390,7 @@ def atkinson_dither(
 
 
 def stucki_dither(
-    image: Image.Image, color_scheme: ColorScheme, serpentine: bool = True
+    image: Image.Image, color_scheme: ColorScheme | ColorPalette, serpentine: bool = True
 ) -> Image.Image:
     """Apply Stucki error diffusion dithering.
 
@@ -411,7 +413,7 @@ def stucki_dither(
 
 
 def jarvis_judice_ninke_dither(
-    image: Image.Image, color_scheme: ColorScheme, serpentine: bool = True
+    image: Image.Image, color_scheme: ColorScheme | ColorPalette, serpentine: bool = True
 ) -> Image.Image:
     """Apply Jarvis-Judice-Ninke error diffusion dithering.
 
@@ -438,12 +440,12 @@ def jarvis_judice_ninke_dither(
 # =============================================================================
 
 
-def direct_palette_map(image: Image.Image, color_scheme: ColorScheme) -> Image.Image:
+def direct_palette_map(image: Image.Image, color_scheme: ColorScheme | ColorPalette) -> Image.Image:
     """Map image colors directly to palette without dithering.
 
     Args:
         image: Input image
-        color_scheme: Target color scheme
+        color_scheme: Target color scheme OR custom ColorPalette
 
     Returns:
         Image with palette colors
@@ -488,7 +490,7 @@ def direct_palette_map(image: Image.Image, color_scheme: ColorScheme) -> Image.I
     return output
 
 
-def ordered_dither(image: Image.Image, color_scheme: ColorScheme) -> Image.Image:
+def ordered_dither(image: Image.Image, color_scheme: ColorScheme | ColorPalette) -> Image.Image:
     """Apply ordered (Bayer) dithering with proper threshold comparison.
 
     Uses a normalized 4x4 Bayer matrix to add spatially-distributed noise
