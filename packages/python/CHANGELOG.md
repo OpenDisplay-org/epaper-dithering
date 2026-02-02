@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/OpenDisplay-org/epaper-dithering/compare/python-v0.3.0...python-v0.3.1) (2026-02-02)
+
+
+### Features
+
+* add measured display color support for accurate dithering ([b5d3df3](https://github.com/OpenDisplay-org/epaper-dithering/commit/b5d3df324b2eb245d47c2a904e9298530fa9bae4))
+
 ## [0.3.0](https://github.com/OpenDisplay-org/epaper-dithering/compare/python-v0.2.0...python-v0.3.0) (2026-02-02)
 
 
