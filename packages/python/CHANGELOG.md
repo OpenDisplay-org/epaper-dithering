@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/OpenDisplay-org/epaper-dithering/compare/python-v0.3.1...python-v0.3.2) (2026-02-03)
+
+
+### Performance Improvements
+
+* vectorize palette matching and pixel processing with NumPy broadcasting ([410f2c1](https://github.com/OpenDisplay-org/epaper-dithering/commit/410f2c1ac5e1db2407134714d1e2f091891d82a9))
+
 ## [0.3.1](https://github.com/OpenDisplay-org/epaper-dithering/compare/python-v0.3.0...python-v0.3.1) (2026-02-02)
 
 
