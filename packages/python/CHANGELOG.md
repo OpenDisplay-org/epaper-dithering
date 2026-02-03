@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.0](https://github.com/OpenDisplay-org/epaper-dithering/compare/python-v0.3.2...python-v0.4.0) (2026-02-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* All dithering algorithms now use LAB color space instead of weighted RGB. Colors will look different (more accurate) than previous versions. Fixes yellow dominance in faces and skin tones. Performance optimized with palette pre-conversion for minimal overhead.
+
+### Features
+
+* add LAB color space for perceptual color matching ([7a5cb07](https://github.com/OpenDisplay-org/epaper-dithering/commit/7a5cb07baa81dbc69e641612ca4b3b622ee6694f))
+
 ## [0.3.2](https://github.com/OpenDisplay-org/epaper-dithering/compare/python-v0.3.1...python-v0.3.2) (2026-02-03)
 
 
