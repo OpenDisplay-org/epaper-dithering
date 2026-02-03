@@ -145,18 +145,19 @@ class ColorScheme(Enum):
 # ============================================================================
 
 # 7.3" Spectra™ 6-color (BWGBRY scheme)
-# TODO: Measure actual display - values are currently theoretical
-# Reference: esp32-photoframe (github.com/aitjcize/esp32-photoframe) measured similar display:
-#   White=(179,182,171), Red=(117,10,0), Yellow=(201,184,0),
-#   Blue=(0,47,107), Green=(33,69,40), Black=(2,2,2)
+# Measured: 2026-02-03
+# Equipment: iPhone 15 Pro Max RAW + Hue Play bars @ 6500K (154 mireds)
+# Method: Photographed calibration patches with white paper reference
+# Normalization: White paper measured at RGB(218,220,221), normalized to (255,255,255)
+# Note: Uses LAB color space for perceptually accurate matching (fixes yellow dominance)
 SPECTRA_7_3_6COLOR = ColorPalette(
     colors={
-        'black': (2, 2, 2),           # Measure: likely darker than pure black
-        'white': (179, 182, 171),     # Measure: real displays ~180-200, not 255
-        'yellow': (201, 184, 0),      # Measure: yellows are dimmer
-        'red': (117 ,10 ,0),          # Measure: reds are much darker
-        'blue': (0, 47, 107),         # Measure: blues are darker
-        'green': (33, 69, 40),        # Measure: greens are darker
+        'black': (26, 14, 35),
+        'white': (180, 197, 202),
+        'yellow': (201, 185, 0),
+        'red': (119, 12, 2),
+        'blue': (0, 67, 137),
+        'green': (40, 81, 58),
     },
     accent='red'
 )

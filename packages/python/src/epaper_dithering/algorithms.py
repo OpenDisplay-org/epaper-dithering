@@ -8,6 +8,11 @@ import numpy as np
 from PIL import Image
 
 from .color_space import srgb_to_linear
+from .color_space_lab import (
+    find_closest_color_lab_preconverted,
+    find_closest_palette_color_lab,
+    rgb_to_lab,
+)
 from .palettes import ColorPalette, ColorScheme
 
 
@@ -214,6 +219,10 @@ def error_diffusion_dither(
         for color in palette_srgb
     ], dtype=np.float32)  # Shape: (num_colors, 3)
 
+    # Pre-convert palette to LAB for optimized per-pixel matching
+    # (eliminates redundant conversions in the loop)
+    palette_lab = rgb_to_lab(palette_linear)  # Shape: (num_colors, 3)
+
     # ===== Output Preparation =====
     output = Image.new("P", (width, height))
     output_pixels = np.zeros((height, width), dtype=np.uint8)
@@ -231,8 +240,9 @@ def error_diffusion_dither(
             # Note: pixels_linear buffer can be outside [0, 1] due to error accumulation
             old_pixel = np.clip(pixels_linear[y, x, :3], 0.0, 1.0)
 
-            # Find closest palette color (vectorized)
-            new_idx = find_closest_palette_color_linear(old_pixel, palette_linear).item()
+            # Find closest palette color using LAB color space (perceptually accurate)
+            # Uses pre-converted LAB palette for optimal performance
+            new_idx = find_closest_color_lab_preconverted(old_pixel, palette_lab)
             new_pixel = palette_linear[new_idx]
 
             # Store palette index
@@ -465,8 +475,8 @@ def direct_palette_map(image: Image.Image, color_scheme: ColorScheme | ColorPale
         for color in palette_srgb
     ], dtype=np.float32)
 
-    # Find closest palette color for ALL pixels at once
-    output_pixels = find_closest_palette_color_linear(pixels_linear, palette_linear)
+    # Find closest palette color for ALL pixels at once using LAB
+    output_pixels = find_closest_palette_color_lab(pixels_linear, palette_linear)
 
     # ===== Output Assembly =====
     output = Image.new("P", (width, height))
@@ -540,8 +550,8 @@ def ordered_dither(image: Image.Image, color_scheme: ColorScheme | ColorPalette)
     dithered_pixels = pixels_linear + threshold_matrix[:, :, np.newaxis]
     dithered_pixels = np.clip(dithered_pixels, 0.0, 1.0)
 
-    # Find closest palette color for ALL pixels at once
-    output_pixels = find_closest_palette_color_linear(dithered_pixels, palette_linear)
+    # Find closest palette color for ALL pixels at once using LAB
+    output_pixels = find_closest_palette_color_lab(dithered_pixels, palette_linear)
 
     # ===== Output Assembly =====
     output = Image.new("P", (width, height))
