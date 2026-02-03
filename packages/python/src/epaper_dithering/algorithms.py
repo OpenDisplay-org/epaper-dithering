@@ -122,9 +122,9 @@ def get_palette_colors(color_scheme: ColorScheme | ColorPalette) -> list[tuple[i
 
 
 def find_closest_palette_color_linear(
-    rgb_linear: tuple[float, float, float],
-    palette_linear: list[tuple[float, float, float]],
-) -> int:
+    rgb_linear: np.ndarray,
+    palette_linear: np.ndarray,
+) -> np.ndarray:
     """Find closest palette color using perceptual weighting in linear space.
 
     Uses ITU-R BT.601 luma coefficients for perceptual weighting:
@@ -132,35 +132,29 @@ def find_closest_palette_color_linear(
     - Green: 0.587 (most perceptually important)
     - Blue: 0.114 (least perceptually important)
 
-    This better matches human vision compared to simple RGB Euclidean distance.
-
     Args:
-        rgb_linear: Input RGB color in linear space [0.0-1.0]
-        palette_linear: Palette colors in linear space [0.0-1.0]
+        rgb_linear: Linear RGB values. Shape:
+            - (3,) for single pixel
+            - (height, width, 3) for entire image
+        palette_linear: Palette colors in linear space. Shape: (num_colors, 3)
 
     Returns:
-        Index of closest palette color
+        Palette indices. Shape matches input without last dimension:
+            - scalar for single pixel
+            - (height, width) for image
     """
     # ITU-R BT.601 luma weights
     LUMA_WEIGHTS = np.array([0.299, 0.587, 0.114], dtype=np.float32)
 
-    min_distance = float("inf")
-    closest_idx = 0
+    # Vectorized palette matching using broadcasting
+    # (..., 1, 3) - (1, colors, 3) -> (..., colors, 3)
+    diff = rgb_linear[..., np.newaxis, :] - palette_linear[np.newaxis, :, :]
 
-    rgb_array = np.array(rgb_linear, dtype=np.float32)
+    # Weighted squared distance: (..., colors)
+    distances = np.sum(LUMA_WEIGHTS * (diff ** 2), axis=-1)
 
-    for idx, pal_color in enumerate(palette_linear):
-        pal_array = np.array(pal_color, dtype=np.float32)
-
-        # Weighted Euclidean distance
-        diff = rgb_array - pal_array
-        distance = np.sum(LUMA_WEIGHTS * (diff**2))
-
-        if distance < min_distance:
-            min_distance = distance
-            closest_idx = idx
-
-    return closest_idx
+    # Find minimum: (...,)
+    return np.argmin(distances, axis=-1)  # type: ignore[no-any-return]
 
 
 def error_diffusion_dither(
@@ -213,12 +207,12 @@ def error_diffusion_dither(
     pixels_linear = srgb_to_linear(pixels_srgb.astype(np.float32))
     height, width = pixels_linear.shape[:2]
 
-    # Convert palette to linear space
+    # Convert palette to linear space (as numpy array for vectorized matching)
     palette_srgb = get_palette_colors(color_scheme)
-    palette_linear = [
-        tuple(srgb_to_linear(np.array(color, dtype=np.float32)))
+    palette_linear = np.array([
+        srgb_to_linear(np.array(color, dtype=np.float32))
         for color in palette_srgb
-    ]
+    ], dtype=np.float32)  # Shape: (num_colors, 3)
 
     # ===== Output Preparation =====
     output = Image.new("P", (width, height))
@@ -235,19 +229,17 @@ def error_diffusion_dither(
         for x in x_range:
             # Read current pixel (clamped to valid range)
             # Note: pixels_linear buffer can be outside [0, 1] due to error accumulation
-            old_pixel = tuple(np.clip(pixels_linear[y, x, :3], 0.0, 1.0))
+            old_pixel = np.clip(pixels_linear[y, x, :3], 0.0, 1.0)
 
-            # Find closest palette color
-            new_idx = find_closest_palette_color_linear(old_pixel, palette_linear)
+            # Find closest palette color (vectorized)
+            new_idx = find_closest_palette_color_linear(old_pixel, palette_linear).item()
             new_pixel = palette_linear[new_idx]
 
             # Store palette index
             output_pixels[y, x] = new_idx
 
             # Calculate quantization error (in linear space)
-            error = np.array(
-                [old_pixel[i] - new_pixel[i] for i in range(3)], dtype=np.float32
-            )
+            error = old_pixel - new_pixel
 
             # Distribute error using kernel
             for dx, dy, weight in kernel.offsets:
@@ -436,7 +428,7 @@ def jarvis_judice_ninke_dither(
 
 
 # =============================================================================
-# Non-Error-Diffusion Algorithms (TODO: Refactor in separate task)
+# Non-Error-Diffusion Algorithms
 # =============================================================================
 
 
@@ -458,44 +450,39 @@ def direct_palette_map(image: Image.Image, color_scheme: ColorScheme | ColorPale
     elif image.mode != "RGB":
         image = image.convert("RGB")
 
-    palette = get_palette_colors(color_scheme)
-    pixels = np.array(image)
-    height, width = pixels.shape[:2]
+    palette_srgb = get_palette_colors(color_scheme)
+    pixels_srgb = np.array(image, dtype=np.uint8)
+    height, width = pixels_srgb.shape[:2]
 
-    # Create output image
+    # ===== VECTORIZED PALETTE MAPPING =====
+
+    # Convert to linear space for perceptual accuracy
+    pixels_linear = srgb_to_linear(pixels_srgb.astype(np.float32))
+
+    # Convert palette to linear space
+    palette_linear = np.array([
+        srgb_to_linear(np.array(color, dtype=np.float32))
+        for color in palette_srgb
+    ], dtype=np.float32)
+
+    # Find closest palette color for ALL pixels at once
+    output_pixels = find_closest_palette_color_linear(pixels_linear, palette_linear)
+
+    # ===== Output Assembly =====
     output = Image.new("P", (width, height))
-    output_pixels = np.zeros((height, width), dtype=np.uint8)
-
-    # Map each pixel to closest palette color
-    # TODO: Use linear space and weighted distance (like error diffusion)
-    for y in range(height):
-        for x in range(width):
-            rgb = tuple(pixels[y, x, :3])
-            # Find closest using simple Euclidean (legacy behavior)
-            min_distance = float("inf")
-            closest_idx = 0
-            for idx, pal_color in enumerate(palette):
-                distance = sum((int(a) - int(b)) ** 2 for a, b in zip(rgb, pal_color))
-                if distance < min_distance:
-                    min_distance = distance
-                    closest_idx = idx
-            output_pixels[y, x] = closest_idx
-
     output.putdata(output_pixels.flatten())
-
-    # Set palette
-    flat_palette = [c for rgb in palette for c in rgb]
+    flat_palette = [c for rgb in palette_srgb for c in rgb]
     output.putpalette(flat_palette)
 
     return output
 
 
 def ordered_dither(image: Image.Image, color_scheme: ColorScheme | ColorPalette) -> Image.Image:
-    """Apply ordered (Bayer) dithering with proper threshold comparison.
+    """Apply ordered (Bayer) dithering with full vectorization.
 
     Uses a normalized 4x4 Bayer matrix to add spatially-distributed noise
     before quantization. Unlike error diffusion, ordered dithering does not
-    propagate errors between pixels, making it suitable for parallel processing.
+    propagate errors between pixels, making it ideal for vectorization.
 
     This implementation works in linear RGB space with proper gamma correction
     and uses small centered threshold offsets (not the broken 0-240 bias from
@@ -515,7 +502,6 @@ def ordered_dither(image: Image.Image, color_scheme: ColorScheme | ColorPalette)
         - Works in linear RGB space for correct quantization
     """
     # Bayer 4x4 matrix normalized to [-0.5, 0.5] (centered around 0)
-    # This provides small threshold variations without massive bias
     bayer_matrix = (
         np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]],
                  dtype=np.float32)
@@ -524,7 +510,6 @@ def ordered_dither(image: Image.Image, color_scheme: ColorScheme | ColorPalette)
     )
 
     # ===== Image Preprocessing =====
-    # Handle alpha channel
     if image.mode == "RGBA":
         background = Image.new("RGB", image.size, (255, 255, 255))
         background.paste(image, mask=image.split()[3])
@@ -533,39 +518,33 @@ def ordered_dither(image: Image.Image, color_scheme: ColorScheme | ColorPalette)
         image = image.convert("RGB")
 
     # ===== Color Space Conversion =====
-    # Convert to linear RGB for correct dithering
     pixels_srgb = np.array(image, dtype=np.uint8)
     pixels_linear = srgb_to_linear(pixels_srgb.astype(np.float32))
     height, width = pixels_linear.shape[:2]
 
-    # Convert palette to linear
+    # Convert palette to numpy array for vectorized operations
     palette_srgb = get_palette_colors(color_scheme)
-    palette_linear = [
-        tuple(srgb_to_linear(np.array(color, dtype=np.float32)))
+    palette_linear = np.array([
+        srgb_to_linear(np.array(color, dtype=np.float32))
         for color in palette_srgb
-    ]
+    ], dtype=np.float32)  # Shape: (num_colors, 3)
 
-    # ===== Output Preparation =====
-    output = Image.new("P", (width, height))
-    output_pixels = np.zeros((height, width), dtype=np.uint8)
+    # ===== VECTORIZED ORDERED DITHERING =====
 
-    # ===== Ordered Dithering =====
-    for y in range(height):
-        for x in range(width):
-            # Get Bayer threshold for this position (small value in [-0.5, 0.5])
-            threshold = bayer_matrix[y % 4, x % 4]
+    # Create threshold matrix for entire image using broadcasting
+    y_indices = np.arange(height)[:, np.newaxis] % 4  # Shape: (height, 1)
+    x_indices = np.arange(width)[np.newaxis, :] % 4   # Shape: (1, width)
+    threshold_matrix = bayer_matrix[y_indices, x_indices]  # Shape: (height, width)
 
-            # Add threshold to pixel (in linear space)
-            # This creates spatially-distributed quantization points
-            dithered_pixel = pixels_linear[y, x, :3] + threshold
-            dithered_pixel = np.clip(dithered_pixel, 0.0, 1.0)
+    # Add threshold to all pixels at once
+    dithered_pixels = pixels_linear + threshold_matrix[:, :, np.newaxis]
+    dithered_pixels = np.clip(dithered_pixels, 0.0, 1.0)
 
-            # Find closest palette color using perceptual distance
-            output_pixels[y, x] = find_closest_palette_color_linear(
-                tuple(dithered_pixel), palette_linear
-            )
+    # Find closest palette color for ALL pixels at once
+    output_pixels = find_closest_palette_color_linear(dithered_pixels, palette_linear)
 
     # ===== Output Assembly =====
+    output = Image.new("P", (width, height))
     output.putdata(output_pixels.flatten())
     flat_palette = [c for rgb in palette_srgb for c in rgb]
     output.putpalette(flat_palette)

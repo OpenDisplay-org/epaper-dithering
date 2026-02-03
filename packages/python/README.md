@@ -5,6 +5,10 @@ Dithering algorithms optimized for e-ink/e-paper displays with limited color pal
 ## Installation
 
 ```bash
+# With uv
+uv add epaper-dithering
+
+# With pip
 pip install epaper-dithering
 ```
 
@@ -200,9 +204,6 @@ uv run mypy src/epaper_dithering
 ```
 
 ## Credits
-
-Originally developed as part of [py-opendisplay](https://github.com/OpenDisplay-org/py-opendisplay).
-Extracted to enable reuse across multiple e-paper display projects.
 
 Measured color calibration techniques and reference measurements inspired by:
 - [esp32-photoframe](https://github.com/aitjcize/esp32-photoframe) by aitjcize - Measured palette methodology and reference values for Waveshare 7.3" displays
