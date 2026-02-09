@@ -57,8 +57,8 @@ class ColorScheme(Enum):
         colors={
             'black': (0, 0, 0),
             'white': (255, 255, 255),
-            'red': (255, 0, 0),
             'yellow': (255, 255, 0),
+            'red': (255, 0, 0),
         },
         accent='red'
     ))
@@ -178,8 +178,8 @@ BWRY_4_2 = ColorPalette(
     colors={
         'black': (5, 5, 5),           # Measure
         'white': (200, 200, 200),     # Measure
-        'red': (120, 15, 5),          # Measure
         'yellow': (200, 180, 0),      # Measure
+        'red': (120, 15, 5),          # Measure
     },
     accent='red'
 )

@@ -70,6 +70,24 @@ class TestColorSchemes:
             assert scheme.accent_color in scheme.palette.colors, \
                 f"Accent color '{scheme.accent_color}' should be in palette"
 
+    def test_palette_color_order_matches_firmware(self):
+        """Test palette color ordering matches bb_epaper firmware conventions.
+
+        The e-paper display controller (bb_epaper) defines:
+            BBEP_BLACK=0, BBEP_WHITE=1, BBEP_YELLOW=2, BBEP_RED=3
+        All schemes must match this hardware order. Getting this wrong
+        causes colors to display swapped on real hardware.
+        """
+        # BWRY: black=0, white=1, yellow=2, red=3
+        bwry_keys = list(ColorScheme.BWRY.palette.colors.keys())
+        assert bwry_keys == ['black', 'white', 'yellow', 'red'], \
+            f"BWRY order must be black,white,yellow,red (firmware convention), got {bwry_keys}"
+
+        # BWGBRY: black=0, white=1, yellow=2, red=3, blue=4(5), green=5(6)
+        bwgbry_keys = list(ColorScheme.BWGBRY.palette.colors.keys())
+        assert bwgbry_keys == ['black', 'white', 'yellow', 'red', 'blue', 'green'], \
+            f"BWGBRY order must be black,white,yellow,red,blue,green, got {bwgbry_keys}"
+
     def test_from_value_method(self):
         """Test ColorScheme.from_value() works correctly."""
         assert ColorScheme.from_value(0) == ColorScheme.MONO
