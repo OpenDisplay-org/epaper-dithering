@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/OpenDisplay-org/epaper-dithering/compare/python-v0.5.0...python-v0.5.1) (2026-02-09)
+
+
+### Performance Improvements
+
+* eliminate numpy overhead in error diffusion inner loop ([49dccd7](https://github.com/OpenDisplay-org/epaper-dithering/commit/49dccd77067a667ace050bf33ad233380996b303))
+
 ## [0.5.0](https://github.com/OpenDisplay-org/epaper-dithering/compare/python-v0.4.0...python-v0.5.0) (2026-02-09)
 
 
