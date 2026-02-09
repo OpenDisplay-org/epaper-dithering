@@ -111,6 +111,14 @@ JARVIS_JUDICE_NINKE = ErrorDiffusionKernel(
     ],
 )
 
+# Bayer 4x4 matrix normalized to [-0.5, 0.5] (centered around 0)
+_BAYER_4X4 = (
+    np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]],
+             dtype=np.float32)
+    / 16.0
+    - 0.5
+)
+
 
 def get_palette_colors(color_scheme: ColorScheme | ColorPalette) -> list[tuple[int, int, int]]:
     """Get RGB palette for color scheme or custom palette.
@@ -176,15 +184,21 @@ def error_diffusion_dither(
     pixels_linear = srgb_to_linear(pixels_srgb.astype(np.float32))
     height, width = pixels_linear.shape[:2]
 
-    # Convert palette to linear space (as numpy array for vectorized matching)
+    # Convert palette to linear space
     palette_srgb = get_palette_colors(color_scheme)
-    palette_linear = np.array([
-        srgb_to_linear(np.array(color, dtype=np.float32))
-        for color in palette_srgb
-    ], dtype=np.float32)  # Shape: (num_colors, 3)
+    palette_linear = srgb_to_linear(np.array(palette_srgb, dtype=np.float32))
 
     # Pre-compute palette LAB components for scalar per-pixel matching
     palette_L, palette_a, palette_b, palette_C = precompute_palette_lab(palette_linear)
+
+    # Pre-extract palette linear RGB as Python floats (avoids numpy indexing in loop)
+    palette_rgb = [
+        (float(palette_linear[i, 0]), float(palette_linear[i, 1]), float(palette_linear[i, 2]))
+        for i in range(len(palette_srgb))
+    ]
+
+    # Pre-normalize kernel weights (eliminates division per pixel)
+    normalized_offsets = [(dx, dy, weight / kernel.divisor) for dx, dy, weight in kernel.offsets]
 
     # ===== Output Preparation =====
     output = Image.new("P", (width, height))
@@ -199,25 +213,26 @@ def error_diffusion_dither(
             x_range = range(width)  # Left to right
 
         for x in x_range:
-            # Read current pixel (clamped to valid range)
+            # Read current pixel as scalars (clamped to valid range)
             # Note: pixels_linear buffer can be outside [0, 1] due to error accumulation
-            old_pixel = np.clip(pixels_linear[y, x, :3], 0.0, 1.0)
+            r = max(0.0, min(1.0, float(pixels_linear[y, x, 0])))
+            g = max(0.0, min(1.0, float(pixels_linear[y, x, 1])))
+            b = max(0.0, min(1.0, float(pixels_linear[y, x, 2])))
 
             # Find closest palette color using LCH-weighted LAB distance
-            new_idx = _match_pixel_lch(
-                float(old_pixel[0]), float(old_pixel[1]), float(old_pixel[2]),
-                palette_L, palette_a, palette_b, palette_C,
-            )
-            new_pixel = palette_linear[new_idx]
+            new_idx = _match_pixel_lch(r, g, b, palette_L, palette_a, palette_b, palette_C)
 
             # Store palette index
             output_pixels[y, x] = new_idx
 
-            # Calculate quantization error (in linear space)
-            error = old_pixel - new_pixel
+            # Calculate quantization error per channel (in linear space)
+            pr, pg, pb = palette_rgb[new_idx]
+            err_r = r - pr
+            err_g = g - pg
+            err_b = b - pb
 
-            # Distribute error using kernel
-            for dx, dy, weight in kernel.offsets:
+            # Distribute error using pre-normalized kernel weights
+            for dx, dy, nw in normalized_offsets:
                 # Flip horizontal offset if serpentine on odd row
                 if serpentine and y % 2 == 1:
                     dx = -dx
@@ -226,7 +241,9 @@ def error_diffusion_dither(
 
                 # Check bounds and distribute error
                 if 0 <= nx < width and 0 <= ny < height:
-                    pixels_linear[ny, nx] += error * (weight / kernel.divisor)
+                    pixels_linear[ny, nx, 0] += err_r * nw
+                    pixels_linear[ny, nx, 1] += err_g * nw
+                    pixels_linear[ny, nx, 2] += err_b * nw
 
     # ===== Output Assembly =====
     output.putdata(output_pixels.flatten())
@@ -273,9 +290,9 @@ def burkes_dither(
 ) -> Image.Image:
     """Apply Burkes error diffusion dithering.
 
-    Burkes kernel (divisor 200):
-                 X  32  12
-         5  12  26  12   5
+    Burkes kernel (divisor 32):
+             X   8   4
+     2   4   8   4   2
 
     Args:
         image: Input image
@@ -435,10 +452,7 @@ def direct_palette_map(image: Image.Image, color_scheme: ColorScheme | ColorPale
     pixels_linear = srgb_to_linear(pixels_srgb.astype(np.float32))
 
     # Convert palette to linear space
-    palette_linear = np.array([
-        srgb_to_linear(np.array(color, dtype=np.float32))
-        for color in palette_srgb
-    ], dtype=np.float32)
+    palette_linear = srgb_to_linear(np.array(palette_srgb, dtype=np.float32))
 
     # Find closest palette color for ALL pixels at once using LAB
     output_pixels = find_closest_palette_color_lab(pixels_linear, palette_linear)
@@ -497,12 +511,9 @@ def ordered_dither(image: Image.Image, color_scheme: ColorScheme | ColorPalette)
     pixels_linear = srgb_to_linear(pixels_srgb.astype(np.float32))
     height, width = pixels_linear.shape[:2]
 
-    # Convert palette to numpy array for vectorized operations
+    # Convert palette to linear space
     palette_srgb = get_palette_colors(color_scheme)
-    palette_linear = np.array([
-        srgb_to_linear(np.array(color, dtype=np.float32))
-        for color in palette_srgb
-    ], dtype=np.float32)  # Shape: (num_colors, 3)
+    palette_linear = srgb_to_linear(np.array(palette_srgb, dtype=np.float32))
 
     # ===== VECTORIZED ORDERED DITHERING =====
 
