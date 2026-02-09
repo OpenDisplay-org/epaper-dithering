@@ -309,3 +309,40 @@ class TestMeasuredPalettes:
         # Test BWR palette
         result = dither_image(small_test_image, HANSHOW_BWR, DitherMode.SIERRA)
         assert result.mode == 'P'
+
+    def test_bright_green_matches_green_not_yellow(self):
+        """Test that bright green pixels match palette green, not yellow.
+
+        With the SPECTRA measured palette, green is very dark (L~31) while
+        yellow is bright (L~75). Naive LAB distance would match bright green
+        to yellow due to the lightness gap. The LCH-weighted distance fixes
+        this by de-emphasizing lightness and emphasizing hue.
+        """
+        from epaper_dithering import SPECTRA_7_3_6COLOR
+
+        # Bright saturated green — should match green, not yellow
+        green_img = Image.new("RGB", (10, 10), (100, 255, 40))
+        result = dither_image(green_img, SPECTRA_7_3_6COLOR, DitherMode.NONE)
+
+        # SPECTRA palette order: black=0, white=1, yellow=2, red=3, blue=4, green=5
+        pixels = list(result.getdata())
+        green_idx = 5
+        assert all(p == green_idx for p in pixels), \
+            f"Bright green should map to palette green (idx 5), got indices: {set(pixels)}"
+
+    def test_pure_blue_matches_blue_not_black(self):
+        """Test that blue pixels match palette blue, not black.
+
+        The SPECTRA measured black has a slight blue tint (26,13,35).
+        The matching should not confuse blue with black.
+        """
+        from epaper_dithering import SPECTRA_7_3_6COLOR
+
+        blue_img = Image.new("RGB", (10, 10), (0, 0, 255))
+        result = dither_image(blue_img, SPECTRA_7_3_6COLOR, DitherMode.NONE)
+
+        # SPECTRA palette order: black=0, white=1, yellow=2, red=3, blue=4, green=5
+        pixels = list(result.getdata())
+        blue_idx = 4
+        assert all(p == blue_idx for p in pixels), \
+            f"Pure blue should map to palette blue (idx 4), got indices: {set(pixels)}"

@@ -9,9 +9,9 @@ from PIL import Image
 
 from .color_space import srgb_to_linear
 from .color_space_lab import (
-    find_closest_color_lab_preconverted,
+    _match_pixel_lch,
     find_closest_palette_color_lab,
-    rgb_to_lab,
+    precompute_palette_lab,
 )
 from .palettes import ColorPalette, ColorScheme
 
@@ -54,10 +54,10 @@ FLOYD_STEINBERG = ErrorDiffusionKernel(
 
 BURKES = ErrorDiffusionKernel(
     name="Burkes",
-    divisor=200,
+    divisor=32,
     offsets=[
-        (1, 0, 32), (2, 0, 12),  # Current row
-        (-2, 1, 5), (-1, 1, 12), (0, 1, 26), (1, 1, 12), (2, 1, 5),  # Next row
+        (1, 0, 8), (2, 0, 4),  # Current row
+        (-2, 1, 2), (-1, 1, 4), (0, 1, 8), (1, 1, 4), (2, 1, 2),  # Next row
     ],
 )
 
@@ -126,42 +126,6 @@ def get_palette_colors(color_scheme: ColorScheme | ColorPalette) -> list[tuple[i
     return list(color_scheme.colors.values())
 
 
-def find_closest_palette_color_linear(
-    rgb_linear: np.ndarray,
-    palette_linear: np.ndarray,
-) -> np.ndarray:
-    """Find closest palette color using perceptual weighting in linear space.
-
-    Uses ITU-R BT.601 luma coefficients for perceptual weighting:
-    - Red: 0.299 (moderate perceptual importance)
-    - Green: 0.587 (most perceptually important)
-    - Blue: 0.114 (least perceptually important)
-
-    Args:
-        rgb_linear: Linear RGB values. Shape:
-            - (3,) for single pixel
-            - (height, width, 3) for entire image
-        palette_linear: Palette colors in linear space. Shape: (num_colors, 3)
-
-    Returns:
-        Palette indices. Shape matches input without last dimension:
-            - scalar for single pixel
-            - (height, width) for image
-    """
-    # ITU-R BT.601 luma weights
-    LUMA_WEIGHTS = np.array([0.299, 0.587, 0.114], dtype=np.float32)
-
-    # Vectorized palette matching using broadcasting
-    # (..., 1, 3) - (1, colors, 3) -> (..., colors, 3)
-    diff = rgb_linear[..., np.newaxis, :] - palette_linear[np.newaxis, :, :]
-
-    # Weighted squared distance: (..., colors)
-    distances = np.sum(LUMA_WEIGHTS * (diff ** 2), axis=-1)
-
-    # Find minimum: (...,)
-    return np.argmin(distances, axis=-1)  # type: ignore[no-any-return]
-
-
 def error_diffusion_dither(
     image: Image.Image,
     color_scheme: ColorScheme | ColorPalette,
@@ -219,9 +183,8 @@ def error_diffusion_dither(
         for color in palette_srgb
     ], dtype=np.float32)  # Shape: (num_colors, 3)
 
-    # Pre-convert palette to LAB for optimized per-pixel matching
-    # (eliminates redundant conversions in the loop)
-    palette_lab = rgb_to_lab(palette_linear)  # Shape: (num_colors, 3)
+    # Pre-compute palette LAB components for scalar per-pixel matching
+    palette_L, palette_a, palette_b, palette_C = precompute_palette_lab(palette_linear)
 
     # ===== Output Preparation =====
     output = Image.new("P", (width, height))
@@ -240,9 +203,11 @@ def error_diffusion_dither(
             # Note: pixels_linear buffer can be outside [0, 1] due to error accumulation
             old_pixel = np.clip(pixels_linear[y, x, :3], 0.0, 1.0)
 
-            # Find closest palette color using LAB color space (perceptually accurate)
-            # Uses pre-converted LAB palette for optimal performance
-            new_idx = find_closest_color_lab_preconverted(old_pixel, palette_lab)
+            # Find closest palette color using LCH-weighted LAB distance
+            new_idx = _match_pixel_lch(
+                float(old_pixel[0]), float(old_pixel[1]), float(old_pixel[2]),
+                palette_L, palette_a, palette_b, palette_C,
+            )
             new_pixel = palette_linear[new_idx]
 
             # Store palette index

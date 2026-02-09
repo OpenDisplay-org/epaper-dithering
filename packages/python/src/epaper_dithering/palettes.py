@@ -148,16 +148,16 @@ class ColorScheme(Enum):
 # Measured: 2026-02-03
 # Equipment: iPhone 15 Pro Max RAW + Hue Play bars @ 6500K (154 mireds)
 # Method: Photographed calibration patches with white paper reference
-# Normalization: White paper measured at RGB(218,220,221), normalized to (255,255,255)
-# Note: Uses LAB color space for perceptually accurate matching (fixes yellow dominance)
+# Raw values in colors.txt, paper reference RGB(215,217,218)
+# Normalization: per-channel scaling value × (255 / paper_channel)
 SPECTRA_7_3_6COLOR = ColorPalette(
     colors={
-        'black': (26, 14, 35),
-        'white': (180, 197, 202),
-        'yellow': (201, 185, 0),
-        'red': (119, 12, 2),
-        'blue': (0, 67, 137),
-        'green': (40, 81, 58),
+        'black': (26, 13, 35),
+        'white': (185, 202, 205),
+        'yellow': (202, 184, 0),
+        'red': (121, 9, 0),
+        'blue': (0, 69, 139),
+        'green': (40, 82, 57),
     },
     accent='red'
 )
