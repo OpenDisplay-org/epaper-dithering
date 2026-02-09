@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.2](https://github.com/OpenDisplay-org/epaper-dithering/compare/python-v0.5.1...python-v0.5.2) (2026-02-09)
+
+
+### Bug Fixes
+
+* swap color order in ColorScheme.BWRY.palette ([812a2d8](https://github.com/OpenDisplay-org/epaper-dithering/commit/812a2d8d47589bd61689ed6d8b54a0bd45e0f328))
+
+
+### Documentation
+
+* add color calibration guide ([723d07a](https://github.com/OpenDisplay-org/epaper-dithering/commit/723d07ae1a42693f2a4e30924c31a3d30bc94b77))
+
 ## [0.5.1](https://github.com/OpenDisplay-org/epaper-dithering/compare/python-v0.5.0...python-v0.5.1) (2026-02-09)
 
 
