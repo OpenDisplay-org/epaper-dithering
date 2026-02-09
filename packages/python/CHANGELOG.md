@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.0](https://github.com/OpenDisplay-org/epaper-dithering/compare/python-v0.4.0...python-v0.5.0) (2026-02-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* replace LAB hue penalty with weighted LCH distance and fix Burkes kernel
+
+### Bug Fixes
+
+* replace LAB hue penalty with weighted LCH distance and fix Burkes kernel ([71cb04c](https://github.com/OpenDisplay-org/epaper-dithering/commit/71cb04c575d77d9ed0e665c569738c220c8937b0))
+
 ## [0.4.0](https://github.com/OpenDisplay-org/epaper-dithering/compare/python-v0.3.2...python-v0.4.0) (2026-02-03)
 
 
