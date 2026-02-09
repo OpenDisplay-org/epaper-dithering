@@ -1,5 +1,9 @@
 # epaper-dithering
 
+[![PyPI](https://img.shields.io/pypi/v/epaper-dithering?style=flat-square)](https://pypi.org/project/epaper-dithering/)
+[![Python Tests](https://img.shields.io/github/actions/workflow/status/OpenDisplay-org/epaper-dithering/python-test.yml?style=flat-square&label=tests)](https://github.com/OpenDisplay-org/epaper-dithering/actions/workflows/python-test.yml)
+[![Python Lint](https://img.shields.io/github/actions/workflow/status/OpenDisplay-org/epaper-dithering/python-lint.yml?style=flat-square&label=lint)](https://github.com/OpenDisplay-org/epaper-dithering/actions/workflows/python-lint.yml)
+
 Dithering algorithms optimized for e-ink/e-paper displays with limited color palettes.
 
 ## Installation

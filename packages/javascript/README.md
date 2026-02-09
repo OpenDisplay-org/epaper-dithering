@@ -1,5 +1,7 @@
 # @opendisplay/epaper-dithering
 
+[![npm](https://img.shields.io/npm/v/@opendisplay/epaper-dithering?style=flat-square)](https://www.npmjs.com/package/@opendisplay/epaper-dithering)
+
 High-quality dithering algorithms for e-paper/e-ink displays, implemented in TypeScript. Works in both browser and Node.js environments.
 
 ## Features
