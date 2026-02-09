@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.4](https://github.com/OpenDisplay-org/epaper-dithering/compare/javascript-v2.1.3...javascript-v2.1.4) (2026-02-09)
+
+
+### Bug Fixes
+
+* swap color order in ColorScheme.BWRY.palette ([812a2d8](https://github.com/OpenDisplay-org/epaper-dithering/commit/812a2d8d47589bd61689ed6d8b54a0bd45e0f328))
+
 ## [2.1.3](https://github.com/OpenDisplay-org/epaper-dithering/compare/javascript-v2.1.2...javascript-v2.1.3) (2026-01-17)
 
 
