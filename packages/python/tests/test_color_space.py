@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from epaper_dithering.color_space import linear_to_srgb, srgb_to_linear
 
@@ -188,6 +189,7 @@ class TestEdgeCases:
         assert linear[1] == 0
         assert linear[2] > 0
 
+    @pytest.mark.filterwarnings("ignore::RuntimeWarning")
     def test_linear_to_srgb_out_of_range(self):
         """Test that out-of-range values are handled."""
         # Values outside [0, 1] should still convert
