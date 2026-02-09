@@ -1,8 +1,9 @@
 """Tests for palette definitions and firmware conventions."""
 
 import pytest
-from epaper_dithering import ColorScheme, DitherMode, dither_image
 from PIL import Image
+
+from epaper_dithering import ColorScheme, DitherMode, dither_image
 
 
 class TestColorSchemes:
