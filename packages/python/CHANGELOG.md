@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.3](https://github.com/OpenDisplay-org/epaper-dithering/compare/python-v0.5.2...python-v0.5.3) (2026-02-10)
+
+
+### Features
+
+* add dynamic range compression for measured palettes ([f3e37a5](https://github.com/OpenDisplay-org/epaper-dithering/commit/f3e37a51eeb1c566d629ef8dc854e53732405316))
+
+
+### Documentation
+
+* update README with badges for PyPI, npm, tests, and linting ([3c61e36](https://github.com/OpenDisplay-org/epaper-dithering/commit/3c61e360cd835983a4d98dfbc5ce20345ce3b7e2))
+
 ## [0.5.2](https://github.com/OpenDisplay-org/epaper-dithering/compare/python-v0.5.1...python-v0.5.2) (2026-02-09)
 
 
