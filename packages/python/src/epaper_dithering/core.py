@@ -17,7 +17,8 @@ def dither_image(
         image: Image.Image,
         color_scheme: ColorScheme | ColorPalette,
         mode: DitherMode = DitherMode.BURKES,
-        serpentine: bool = True
+        serpentine: bool = True,
+        tone_compression: float = 1.0,
 ) -> Image.Image:
     """Apply dithering to image for e-paper display.
 
@@ -28,56 +29,34 @@ def dither_image(
         serpentine: Use serpentine scanning for error diffusion (default: True).
             Alternates scan direction each row to reduce directional artifacts.
             Only applies to error diffusion algorithms, ignored for NONE and ORDERED.
+        tone_compression: Dynamic range compression strength (default: 1.0).
+            Remaps image luminance to the display's actual range before dithering.
+            0.0 = disabled, 1.0 = full compression. Only applies to measured ColorPalette.
 
     Returns:
         Dithered palette image matching color scheme
-
-    Examples:
-        >>> from PIL import Image
-        >>> from epaper_dithering import dither_image, ColorScheme, DitherMode
-        >>>
-        >>> img = Image.open("photo.jpg")
-        >>> dithered = dither_image(img, ColorScheme.BWR, DitherMode.FLOYD_STEINBERG)
-        >>> dithered.save("dithered.png")
-        >>>
-        >>> # v0.4.0: Use measured palette for specific display
-        >>> from epaper_dithering import SPECTRA_7_3_6COLOR
-        >>> dithered = dither_image(img, SPECTRA_7_3_6COLOR, DitherMode.FLOYD_STEINBERG)
-        >>>
-        >>> # Disable serpentine if you prefer raster scanning
-        >>> dithered_raster = dither_image(img, ColorScheme.BWR,
-        ...                                DitherMode.FLOYD_STEINBERG, serpentine=False)
-
-    Notes:
-        v0.3.0 changes:
-        - Now works in linear RGB space with gamma correction for perceptually correct results
-        - RGBA images composite on white background (e-paper assumption)
-        - Serpentine scanning enabled by default to reduce worm artifacts
-
-        v0.4.0 changes:
-        - Now accepts ColorPalette for measured display colors
-        - Use pre-defined measured palettes (SPECTRA_7_3_6COLOR, etc.) or create custom
     """
     # Log color scheme name if available
     scheme_name = color_scheme.name if isinstance(color_scheme, ColorScheme) else "custom"
     _LOGGER.debug("Applying %s dithering for %s palette", mode.name, scheme_name)
 
+    tc = tone_compression
     match mode:
         case DitherMode.NONE:
-            return algorithms.direct_palette_map(image, color_scheme)
+            return algorithms.direct_palette_map(image, color_scheme, tc)
         case DitherMode.ORDERED:
-            return algorithms.ordered_dither(image, color_scheme)
+            return algorithms.ordered_dither(image, color_scheme, tc)
         case DitherMode.FLOYD_STEINBERG:
-            return algorithms.floyd_steinberg_dither(image, color_scheme, serpentine)
+            return algorithms.floyd_steinberg_dither(image, color_scheme, serpentine, tc)
         case DitherMode.ATKINSON:
-            return algorithms.atkinson_dither(image, color_scheme, serpentine)
+            return algorithms.atkinson_dither(image, color_scheme, serpentine, tc)
         case DitherMode.STUCKI:
-            return algorithms.stucki_dither(image, color_scheme, serpentine)
+            return algorithms.stucki_dither(image, color_scheme, serpentine, tc)
         case DitherMode.SIERRA:
-            return algorithms.sierra_dither(image, color_scheme, serpentine)
+            return algorithms.sierra_dither(image, color_scheme, serpentine, tc)
         case DitherMode.SIERRA_LITE:
-            return algorithms.sierra_lite_dither(image, color_scheme, serpentine)
+            return algorithms.sierra_lite_dither(image, color_scheme, serpentine, tc)
         case DitherMode.JARVIS_JUDICE_NINKE:
-            return algorithms.jarvis_judice_ninke_dither(image, color_scheme, serpentine)
+            return algorithms.jarvis_judice_ninke_dither(image, color_scheme, serpentine, tc)
         case _:  # BURKES or fallback
-            return algorithms.burkes_dither(image, color_scheme, serpentine)
+            return algorithms.burkes_dither(image, color_scheme, serpentine, tc)

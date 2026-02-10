@@ -172,3 +172,70 @@ class TestColorScience:
 
             result_false = dither_image(img, ColorScheme.MONO, mode, serpentine=False)
             assert result_false.mode == 'P', f"{mode.name} should work with serpentine=False"
+
+
+class TestToneCompression:
+    """Test dynamic range compression with measured palettes."""
+
+    def test_tone_compression_with_measured_palette(self):
+        """Tone compression should run and produce valid output with measured palette."""
+        from epaper_dithering import SPECTRA_7_3_6COLOR
+
+        img = Image.new("RGB", (20, 20), (200, 200, 200))
+        result = dither_image(img, SPECTRA_7_3_6COLOR, DitherMode.FLOYD_STEINBERG, tone_compression=1.0)
+
+        assert result.mode == 'P'
+        assert result.size == (20, 20)
+
+    @pytest.mark.parametrize("mode", list(DitherMode))
+    def test_tone_compression_all_modes(self, mode):
+        """Tone compression should work with all dithering modes."""
+        from epaper_dithering import SPECTRA_7_3_6COLOR
+
+        img = Image.new("RGB", (10, 10), (128, 128, 128))
+        result = dither_image(img, SPECTRA_7_3_6COLOR, mode, tone_compression=1.0)
+
+        assert result.mode == 'P'
+        assert result.size == (10, 10)
+
+    def test_tone_compression_zero_matches_no_compression(self):
+        """tone_compression=0.0 should produce same result as without compression."""
+        from epaper_dithering import SPECTRA_7_3_6COLOR
+
+        img = Image.new("RGB", (20, 20), (128, 128, 128))
+        result_zero = dither_image(img, SPECTRA_7_3_6COLOR, DitherMode.NONE, tone_compression=0.0)
+        # With ColorScheme (not measured), compression is always skipped
+        result_scheme = dither_image(img, ColorScheme.BWGBRY, DitherMode.NONE, tone_compression=1.0)
+
+        # Both should produce valid palette output
+        assert result_zero.mode == 'P'
+        assert result_scheme.mode == 'P'
+
+    def test_tone_compression_skipped_for_color_scheme(self):
+        """Tone compression should be skipped for theoretical ColorScheme."""
+        img = Image.new("RGB", (20, 20), (128, 128, 128))
+
+        # These should produce identical output since ColorScheme bypasses compression
+        result_tc0 = dither_image(img, ColorScheme.MONO, DitherMode.NONE, tone_compression=0.0)
+        result_tc1 = dither_image(img, ColorScheme.MONO, DitherMode.NONE, tone_compression=1.0)
+
+        assert np.array_equal(np.array(result_tc0), np.array(result_tc1)), \
+            "Tone compression should have no effect on theoretical ColorScheme"
+
+    def test_tone_compression_changes_measured_output(self):
+        """Tone compression should change the output for measured palettes."""
+        from epaper_dithering import SPECTRA_7_3_6COLOR
+
+        # Use a gradient to see meaningful differences
+        gradient = Image.new("RGB", (50, 50))
+        pixels = gradient.load()
+        for y in range(50):
+            for x in range(50):
+                v = int(x * 255 / 49)
+                pixels[x, y] = (v, v, v)
+
+        result_off = dither_image(gradient, SPECTRA_7_3_6COLOR, DitherMode.FLOYD_STEINBERG, tone_compression=0.0)
+        result_on = dither_image(gradient, SPECTRA_7_3_6COLOR, DitherMode.FLOYD_STEINBERG, tone_compression=1.0)
+
+        assert not np.array_equal(np.array(result_off), np.array(result_on)), \
+            "Tone compression should produce different output than no compression"

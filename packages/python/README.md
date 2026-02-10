@@ -21,6 +21,7 @@ pip install epaper-dithering
 - **Perceptually Correct**: Uses linear RGB color space with gamma correction for accurate error diffusion
 - **8 Dithering Algorithms**: From simple ordered dithering to high-quality Jarvis-Judice-Ninke
 - **6 Color Schemes**: Support for mono, 3-color, 4-color, and 6-color e-paper displays
+- **Tone Mapping**: Dynamic range compression maps image luminance to the display's actual range for smoother dithering
 - **Serpentine Scanning**: Reduces directional artifacts in error diffusion (enabled by default)
 - **RGBA Support**: Automatic compositing on white background for transparent images
 
@@ -112,6 +113,27 @@ result = dither_image(img, ColorScheme.BWR, DitherMode.FLOYD_STEINBERG, serpenti
 ```
 
 Note: The `serpentine` parameter only affects error diffusion algorithms (Floyd-Steinberg, Burkes, Atkinson, Sierra, Sierra Lite, Stucki, Jarvis-Judice-Ninke). It has no effect on NONE and ORDERED modes.
+
+#### Tone Compression (Dynamic Range)
+
+E-paper displays can't reproduce the full luminance range of digital images. Pure white on a display is much darker than (255, 255, 255), and pure black is lighter than (0, 0, 0). Without tone compression, dithering tries to represent unreachable brightness levels, causing large accumulated errors and noisy output.
+
+Tone compression remaps image luminance from [0, 1] to the display's actual [black, white] range before dithering, producing smoother results. Based on [`fast_compress_dynamic_range()`](https://github.com/aitjcize/esp32-photoframe) from esp32-photoframe by aitjcize. It is enabled by default (`tone_compression=1.0`) and only applies when using measured `ColorPalette` instances:
+
+```python
+from epaper_dithering import dither_image, SPECTRA_7_3_6COLOR, DitherMode
+
+# Default: full tone compression (recommended)
+result = dither_image(img, SPECTRA_7_3_6COLOR, DitherMode.FLOYD_STEINBERG)
+
+# Disable tone compression
+result = dither_image(img, SPECTRA_7_3_6COLOR, DitherMode.FLOYD_STEINBERG, tone_compression=0.0)
+
+# Partial compression (blend between original and compressed)
+result = dither_image(img, SPECTRA_7_3_6COLOR, DitherMode.FLOYD_STEINBERG, tone_compression=0.5)
+```
+
+Note: `tone_compression` has no effect when using theoretical `ColorScheme` palettes (e.g., `ColorScheme.BWR`), since their black/white values already span the full range.
 
 #### RGBA Images
 
@@ -210,4 +232,4 @@ uv run mypy src/epaper_dithering
 ## Credits
 
 Measured color calibration techniques and reference measurements inspired by:
-- [esp32-photoframe](https://github.com/aitjcize/esp32-photoframe) by aitjcize - Measured palette methodology and reference values for Waveshare 7.3" displays
+- [esp32-photoframe](https://github.com/aitjcize/esp32-photoframe) by aitjcize - Measured palette methodology, dynamic range compression algorithm, and reference values for Waveshare 7.3" displays
