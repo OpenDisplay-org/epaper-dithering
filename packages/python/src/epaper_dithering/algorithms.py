@@ -14,7 +14,7 @@ from .color_space_lab import (
     precompute_palette_lab,
 )
 from .palettes import ColorPalette, ColorScheme
-from .tone_map import compress_dynamic_range
+from .tone_map import auto_compress_dynamic_range, compress_dynamic_range
 
 
 @dataclass(frozen=True)
@@ -140,7 +140,7 @@ def error_diffusion_dither(
     color_scheme: ColorScheme | ColorPalette,
     kernel: ErrorDiffusionKernel,
     serpentine: bool = True,
-    tone_compression: float = 1.0,
+    tone_compression: float | str = "auto",
 ) -> Image.Image:
     """Generic error diffusion dithering with any kernel.
 
@@ -191,8 +191,11 @@ def error_diffusion_dither(
     palette_linear = srgb_to_linear(np.array(palette_srgb, dtype=np.float32))
 
     # Compress dynamic range for measured palettes
-    if isinstance(color_scheme, ColorPalette) and tone_compression > 0:
-        pixels_linear = compress_dynamic_range(pixels_linear, palette_linear, tone_compression)
+    if isinstance(color_scheme, ColorPalette) and tone_compression != 0:
+        if tone_compression == "auto":
+            pixels_linear = auto_compress_dynamic_range(pixels_linear, palette_linear)
+        else:
+            pixels_linear = compress_dynamic_range(pixels_linear, palette_linear, tone_compression)
 
     # Pre-compute palette LAB components for scalar per-pixel matching
     palette_L, palette_a, palette_b, palette_C = precompute_palette_lab(palette_linear)
@@ -271,7 +274,7 @@ def error_diffusion_dither(
 
 def floyd_steinberg_dither(
     image: Image.Image, color_scheme: ColorScheme | ColorPalette,
-    serpentine: bool = True, tone_compression: float = 1.0,
+    serpentine: bool = True, tone_compression: float | str = "auto",
 ) -> Image.Image:
     """Apply Floyd-Steinberg error diffusion dithering.
 
@@ -295,7 +298,7 @@ def floyd_steinberg_dither(
 
 def burkes_dither(
     image: Image.Image, color_scheme: ColorScheme | ColorPalette,
-    serpentine: bool = True, tone_compression: float = 1.0,
+    serpentine: bool = True, tone_compression: float | str = "auto",
 ) -> Image.Image:
     """Apply Burkes error diffusion dithering.
 
@@ -317,7 +320,7 @@ def burkes_dither(
 
 def sierra_dither(
     image: Image.Image, color_scheme: ColorScheme | ColorPalette,
-    serpentine: bool = True, tone_compression: float = 1.0,
+    serpentine: bool = True, tone_compression: float | str = "auto",
 ) -> Image.Image:
     """Apply Sierra error diffusion dithering.
 
@@ -342,7 +345,7 @@ def sierra_dither(
 
 def sierra_lite_dither(
     image: Image.Image, color_scheme: ColorScheme | ColorPalette,
-    serpentine: bool = True, tone_compression: float = 1.0,
+    serpentine: bool = True, tone_compression: float | str = "auto",
 ) -> Image.Image:
     """Apply Sierra Lite error diffusion dithering.
 
@@ -366,7 +369,7 @@ def sierra_lite_dither(
 
 def atkinson_dither(
     image: Image.Image, color_scheme: ColorScheme | ColorPalette,
-    serpentine: bool = True, tone_compression: float = 1.0,
+    serpentine: bool = True, tone_compression: float | str = "auto",
 ) -> Image.Image:
     """Apply Atkinson error diffusion dithering.
 
@@ -391,7 +394,7 @@ def atkinson_dither(
 
 def stucki_dither(
     image: Image.Image, color_scheme: ColorScheme | ColorPalette,
-    serpentine: bool = True, tone_compression: float = 1.0,
+    serpentine: bool = True, tone_compression: float | str = "auto",
 ) -> Image.Image:
     """Apply Stucki error diffusion dithering.
 
@@ -416,7 +419,7 @@ def stucki_dither(
 
 def jarvis_judice_ninke_dither(
     image: Image.Image, color_scheme: ColorScheme | ColorPalette,
-    serpentine: bool = True, tone_compression: float = 1.0,
+    serpentine: bool = True, tone_compression: float | str = "auto",
 ) -> Image.Image:
     """Apply Jarvis-Judice-Ninke error diffusion dithering.
 
@@ -445,7 +448,7 @@ def jarvis_judice_ninke_dither(
 
 
 def direct_palette_map(
-    image: Image.Image, color_scheme: ColorScheme | ColorPalette, tone_compression: float = 1.0,
+    image: Image.Image, color_scheme: ColorScheme | ColorPalette, tone_compression: float | str = "auto",
 ) -> Image.Image:
     """Map image colors directly to palette without dithering.
 
@@ -478,8 +481,11 @@ def direct_palette_map(
     palette_linear = srgb_to_linear(np.array(palette_srgb, dtype=np.float32))
 
     # Compress dynamic range for measured palettes
-    if isinstance(color_scheme, ColorPalette) and tone_compression > 0:
-        pixels_linear = compress_dynamic_range(pixels_linear, palette_linear, tone_compression)
+    if isinstance(color_scheme, ColorPalette) and tone_compression != 0:
+        if tone_compression == "auto":
+            pixels_linear = auto_compress_dynamic_range(pixels_linear, palette_linear)
+        else:
+            pixels_linear = compress_dynamic_range(pixels_linear, palette_linear, tone_compression)
 
     # Find closest palette color for ALL pixels at once using LAB
     output_pixels = find_closest_palette_color_lab(pixels_linear, palette_linear)
@@ -494,7 +500,7 @@ def direct_palette_map(
 
 
 def ordered_dither(
-    image: Image.Image, color_scheme: ColorScheme | ColorPalette, tone_compression: float = 1.0,
+    image: Image.Image, color_scheme: ColorScheme | ColorPalette, tone_compression: float | str = "auto",
 ) -> Image.Image:
     """Apply ordered (Bayer) dithering with full vectorization.
 
@@ -545,8 +551,11 @@ def ordered_dither(
     palette_linear = srgb_to_linear(np.array(palette_srgb, dtype=np.float32))
 
     # Compress dynamic range for measured palettes
-    if isinstance(color_scheme, ColorPalette) and tone_compression > 0:
-        pixels_linear = compress_dynamic_range(pixels_linear, palette_linear, tone_compression)
+    if isinstance(color_scheme, ColorPalette) and tone_compression != 0:
+        if tone_compression == "auto":
+            pixels_linear = auto_compress_dynamic_range(pixels_linear, palette_linear)
+        else:
+            pixels_linear = compress_dynamic_range(pixels_linear, palette_linear, tone_compression)
 
     # ===== VECTORIZED ORDERED DITHERING =====
 

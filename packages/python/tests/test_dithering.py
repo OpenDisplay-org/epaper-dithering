@@ -218,9 +218,23 @@ class TestToneCompression:
         # These should produce identical output since ColorScheme bypasses compression
         result_tc0 = dither_image(img, ColorScheme.MONO, DitherMode.NONE, tone_compression=0.0)
         result_tc1 = dither_image(img, ColorScheme.MONO, DitherMode.NONE, tone_compression=1.0)
+        result_auto = dither_image(img, ColorScheme.MONO, DitherMode.NONE, tone_compression="auto")
 
         assert np.array_equal(np.array(result_tc0), np.array(result_tc1)), \
             "Tone compression should have no effect on theoretical ColorScheme"
+        assert np.array_equal(np.array(result_tc0), np.array(result_auto)), \
+            "Auto tone compression should have no effect on theoretical ColorScheme"
+
+    @pytest.mark.parametrize("mode", list(DitherMode))
+    def test_auto_tone_compression_all_modes(self, mode):
+        """Auto tone compression (default) should produce valid output for all modes."""
+        from epaper_dithering import SPECTRA_7_3_6COLOR
+
+        img = Image.new("RGB", (10, 10), (128, 128, 128))
+        result = dither_image(img, SPECTRA_7_3_6COLOR, mode)
+
+        assert result.mode == 'P'
+        assert result.size == (10, 10)
 
     def test_tone_compression_changes_measured_output(self):
         """Tone compression should change the output for measured palettes."""

@@ -118,19 +118,22 @@ Note: The `serpentine` parameter only affects error diffusion algorithms (Floyd-
 
 E-paper displays can't reproduce the full luminance range of digital images. Pure white on a display is much darker than (255, 255, 255), and pure black is lighter than (0, 0, 0). Without tone compression, dithering tries to represent unreachable brightness levels, causing large accumulated errors and noisy output.
 
-Tone compression remaps image luminance from [0, 1] to the display's actual [black, white] range before dithering, producing smoother results. Based on [`fast_compress_dynamic_range()`](https://github.com/aitjcize/esp32-photoframe) from esp32-photoframe by aitjcize. It is enabled by default (`tone_compression=1.0`) and only applies when using measured `ColorPalette` instances:
+Tone compression remaps image luminance to the display's actual range before dithering. Based on [`fast_compress_dynamic_range()`](https://github.com/aitjcize/esp32-photoframe) from esp32-photoframe by aitjcize. It is enabled by default (`tone_compression="auto"`) and only applies when using measured `ColorPalette` instances:
+
+- **`"auto"`** (default): Analyzes the image histogram and remaps its actual luminance range to the display range. Maximizes contrast by stretching only the used range.
+- **`0.0-1.0`**: Fixed linear compression strength. `1.0` maps the full [0,1] range to the display range. `0.0` disables compression.
 
 ```python
 from epaper_dithering import dither_image, SPECTRA_7_3_6COLOR, DitherMode
 
-# Default: full tone compression (recommended)
+# Default: auto tone compression (recommended)
 result = dither_image(img, SPECTRA_7_3_6COLOR, DitherMode.FLOYD_STEINBERG)
+
+# Fixed linear compression
+result = dither_image(img, SPECTRA_7_3_6COLOR, DitherMode.FLOYD_STEINBERG, tone_compression=1.0)
 
 # Disable tone compression
 result = dither_image(img, SPECTRA_7_3_6COLOR, DitherMode.FLOYD_STEINBERG, tone_compression=0.0)
-
-# Partial compression (blend between original and compressed)
-result = dither_image(img, SPECTRA_7_3_6COLOR, DitherMode.FLOYD_STEINBERG, tone_compression=0.5)
 ```
 
 Note: `tone_compression` has no effect when using theoretical `ColorScheme` palettes (e.g., `ColorScheme.BWR`), since their black/white values already span the full range.

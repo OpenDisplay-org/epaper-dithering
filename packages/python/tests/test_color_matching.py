@@ -7,7 +7,7 @@ from PIL import Image
 from epaper_dithering import ColorScheme, DitherMode, dither_image
 from epaper_dithering.color_space import srgb_to_linear
 from epaper_dithering.color_space_lab import rgb_to_lab
-from epaper_dithering.tone_map import compress_dynamic_range
+from epaper_dithering.tone_map import auto_compress_dynamic_range, compress_dynamic_range
 
 
 class TestLABConversion:
@@ -177,3 +177,76 @@ class TestCompressDynamicRange:
                         + 0.0721750 * palette_linear[0, 2])
         # Near-black pixels should be set to approximately display black luminance
         assert result.mean() == pytest.approx(black_Y, abs=0.01)
+
+
+class TestAutoCompressDynamicRange:
+    """Unit tests for auto (percentile-based) dynamic range compression."""
+
+    def _make_palette_linear(self, black_srgb, white_srgb):
+        """Helper: convert black/white sRGB tuples to linear palette array."""
+        palette_srgb = np.array([black_srgb, white_srgb], dtype=np.float32)
+        return srgb_to_linear(palette_srgb)
+
+    def _luminance(self, pixels):
+        """Compute per-pixel luminance."""
+        return (0.2126729 * pixels[:, :, 0]
+                + 0.7151522 * pixels[:, :, 1]
+                + 0.0721750 * pixels[:, :, 2])
+
+    def test_full_range_gradient_matches_linear(self):
+        """Full-range gradient should produce similar result to linear compression."""
+        palette_linear = self._make_palette_linear([30, 30, 30], [200, 200, 200])
+        pixels = np.linspace(0.0, 1.0, 100).reshape(10, 10, 1).repeat(3, axis=2).astype(np.float32)
+
+        auto_result = auto_compress_dynamic_range(pixels.copy(), palette_linear)
+        linear_result = compress_dynamic_range(pixels.copy(), palette_linear, 1.0)
+
+        # For a full-range gradient, auto should be close to linear 1.0
+        np.testing.assert_allclose(auto_result, linear_result, atol=0.05)
+
+    def test_narrow_range_has_more_contrast(self):
+        """Narrow-range image should have more contrast with auto than fixed 1.0."""
+        palette_linear = self._make_palette_linear([30, 30, 30], [200, 200, 200])
+        # Image using only 30-70% of luminance range
+        pixels = np.linspace(0.3, 0.7, 100).reshape(10, 10, 1).repeat(3, axis=2).astype(np.float32)
+
+        auto_result = auto_compress_dynamic_range(pixels.copy(), palette_linear)
+        linear_result = compress_dynamic_range(pixels.copy(), palette_linear, 1.0)
+
+        # Auto should stretch to use more of the display range
+        auto_Y = self._luminance(auto_result)
+        linear_Y = self._luminance(linear_result)
+        auto_range = float(auto_Y.max() - auto_Y.min())
+        linear_range = float(linear_Y.max() - linear_Y.min())
+
+        assert auto_range > linear_range, \
+            f"Auto range {auto_range:.4f} should exceed linear range {linear_range:.4f}"
+
+    def test_uniform_image_falls_back(self):
+        """Uniform image should fall back to linear compression."""
+        palette_linear = self._make_palette_linear([30, 30, 30], [200, 200, 200])
+        pixels = np.full((5, 5, 3), 0.5, dtype=np.float32)
+
+        result = auto_compress_dynamic_range(pixels, palette_linear)
+        expected = compress_dynamic_range(pixels.copy(), palette_linear, 1.0)
+        np.testing.assert_allclose(result, expected, atol=1e-5)
+
+    def test_output_luminance_within_display_range(self):
+        """Auto-compressed output luminance should stay within display range (with tolerance)."""
+        palette_linear = self._make_palette_linear([30, 30, 30], [200, 200, 200])
+        black_Y = float(0.2126729 * palette_linear[0, 0]
+                        + 0.7151522 * palette_linear[0, 1]
+                        + 0.0721750 * palette_linear[0, 2])
+        white_Y = float(0.2126729 * palette_linear[1, 0]
+                        + 0.7151522 * palette_linear[1, 1]
+                        + 0.0721750 * palette_linear[1, 2])
+
+        pixels = np.linspace(0.0, 1.0, 100).reshape(10, 10, 1).repeat(3, axis=2).astype(np.float32)
+        result = auto_compress_dynamic_range(pixels, palette_linear)
+        result_Y = self._luminance(result)
+
+        # p2/p98 percentile-based: the 2% outliers at each end may exceed the range slightly
+        p2 = float(np.percentile(result_Y, 2))
+        p98 = float(np.percentile(result_Y, 98))
+        assert p2 >= black_Y - 0.01, f"p2 luminance {p2:.4f} should be near black_Y {black_Y:.4f}"
+        assert p98 <= white_Y + 0.01, f"p98 luminance {p98:.4f} should be near white_Y {white_Y:.4f}"

@@ -18,7 +18,7 @@ def dither_image(
         color_scheme: ColorScheme | ColorPalette,
         mode: DitherMode = DitherMode.BURKES,
         serpentine: bool = True,
-        tone_compression: float = 1.0,
+        tone_compression: float | str = "auto",
 ) -> Image.Image:
     """Apply dithering to image for e-paper display.
 
@@ -29,9 +29,10 @@ def dither_image(
         serpentine: Use serpentine scanning for error diffusion (default: True).
             Alternates scan direction each row to reduce directional artifacts.
             Only applies to error diffusion algorithms, ignored for NONE and ORDERED.
-        tone_compression: Dynamic range compression strength (default: 1.0).
-            Remaps image luminance to the display's actual range before dithering.
-            0.0 = disabled, 1.0 = full compression. Only applies to measured ColorPalette.
+        tone_compression: Dynamic range compression (default: "auto").
+            "auto" = analyze image histogram and fit to display range.
+            0.0 = disabled, 0.0-1.0 = fixed linear compression strength.
+            Only applies to measured ColorPalette.
 
     Returns:
         Dithered palette image matching color scheme
