@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.0](https://github.com/OpenDisplay-org/epaper-dithering/compare/python-v0.5.3...python-v0.6.0) (2026-02-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* tone_compression default changed from 1.0 to "auto".
+
+### Features
+
+* add auto tone compression as default ([a8fa4ca](https://github.com/OpenDisplay-org/epaper-dithering/commit/a8fa4cab91e9bebe7a6ff78f5faa38e83903474e))
+
 ## [0.5.3](https://github.com/OpenDisplay-org/epaper-dithering/compare/python-v0.5.2...python-v0.5.3) (2026-02-10)
 
 
